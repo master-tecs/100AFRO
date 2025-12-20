@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { uploadImage } from "@/lib/cloudinary";
 
+export const runtime = 'edge';
+
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
