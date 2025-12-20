@@ -1,6 +1,6 @@
 # 100AFRO - African Entertainment Hub
 
-A full-stack Next.js application for African entertainment content, featuring blogs, videos, charts, and more.
+A full-stack Next.js application for African entertainment content, featuring blogs, videos, charts, and alot more.
 
 ## Tech Stack
 
@@ -27,7 +27,7 @@ A full-stack Next.js application for African entertainment content, featuring bl
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - PostgreSQL database (Neon recommended)
 - Cloudinary account
 - NextAuth providers (Google, GitHub, etc.)
@@ -35,12 +35,13 @@ A full-stack Next.js application for African entertainment content, featuring bl
 ### Installation
 
 1. **Install dependencies**:
+
 ```bash
 npm install
 ```
 
 2. **Set up environment variables**:
-Create a `.env.local` file in the root directory:
+   Create a `.env.local` file in the root directory:
 
 ```env
 # Database
@@ -63,6 +64,7 @@ GITHUB_SECRET=""
 ```
 
 3. **Set up the database**:
+
 ```bash
 # Generate Prisma Client
 npx prisma generate
@@ -75,12 +77,14 @@ npm run db:seed
 ```
 
 4. **Set up full-text search** (optional but recommended):
+
 ```bash
 # Run the full-text search migration
 psql $DATABASE_URL -f prisma/migrations/add_fulltext_search.sql
 ```
 
 5. **Run the development server**:
+
 ```bash
 npm run dev
 ```
@@ -125,6 +129,7 @@ lib/
 ## Database Schema
 
 The application uses the following main models:
+
 - `User` - User accounts and authentication
 - `BlogPost` - Blog articles
 - `Comment` - Comments on blog posts
@@ -150,6 +155,7 @@ The application uses PostgreSQL's native full-text search capabilities. The sear
 ### Other Platforms
 
 Make sure to:
+
 - Set all environment variables
 - Run `npm run build` to test the build
 - Configure your database connection
@@ -165,4 +171,5 @@ Make sure to:
 ## License
 
 MIT
+
 # 100AFRO
