@@ -4,11 +4,12 @@ import BlogPostCard from '../components/BlogPostCard';
 import VideoCard from '../components/VideoCard';
 
 interface SearchPageProps {
-  searchParams: { q?: string };
+  searchParams: Promise<{ q?: string }>;
 }
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
-  const query = searchParams.q || '';
+  const { q } = await searchParams;
+  const query = q || '';
 
   let blogs: any[] = [];
   let videos: any[] = [];

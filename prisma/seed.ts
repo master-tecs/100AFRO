@@ -212,7 +212,7 @@ async function main() {
     create: {
       id: CURRENT_POLL.id,
       question: CURRENT_POLL.question,
-      options: CURRENT_POLL.options,
+      options: CURRENT_POLL.options as any,
       active: true,
     },
   });

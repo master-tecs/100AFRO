@@ -11,7 +11,7 @@ import BlogPostCard from '../../components/BlogPostCard';
 import CommentsSection from '../../components/CommentsSection';
 
 interface BlogDetailPageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 export async function generateStaticParams() {
@@ -25,8 +25,9 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: BlogDetailPageProps) {
+  const { slug } = await params;
   const post = await prisma.blogPost.findUnique({
-    where: { slug: params.slug },
+    where: { slug },
     include: { author: { select: { name: true } } },
   });
 
@@ -55,8 +56,9 @@ export async function generateMetadata({ params }: BlogDetailPageProps) {
 }
 
 export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
+  const { slug } = await params;
   const post = await prisma.blogPost.findUnique({
-    where: { slug: params.slug },
+    where: { slug },
     include: {
       author: {
         select: {

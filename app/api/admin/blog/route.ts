@@ -1,24 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { prisma } from '@/lib/prisma';
-import { BlogCategory } from '@prisma/client';
-import { slugify } from '@/lib/utils';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { BlogCategory } from "@prisma/client";
+import { slugify } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session || (session.user as any)?.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+
+    if (!session || (session.user as any)?.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const searchParams = request.nextUrl.searchParams;
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "50");
     const skip = (page - 1) * limit;
 
     const [posts, total] = await Promise.all([
@@ -31,7 +28,7 @@ export async function GET(request: NextRequest) {
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          createdAt: "desc",
         },
         skip,
         take: limit,
@@ -49,9 +46,9 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching blog posts:', error);
+    console.error("Error fetching blog posts:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch blog posts' },
+      { error: "Failed to fetch blog posts" },
       { status: 500 }
     );
   }
@@ -60,26 +57,24 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session || (session.user as any)?.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+
+    if (!session || (session.user as any)?.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
-    const { title, excerpt, content, category, featured, imageUrl, authorId } = body;
+    const { title, excerpt, content, category, featured, imageUrl, authorId } =
+      body;
 
     if (!title || !excerpt || !content || !category) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
     const slug = slugify(title);
-    
+
     // Check if slug already exists
     const existing = await prisma.blogPost.findUnique({
       where: { slug },
@@ -87,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     if (existing) {
       return NextResponse.json(
-        { error: 'A post with this title already exists' },
+        { error: "A post with this title already exists" },
         { status: 400 }
       );
     }
@@ -100,7 +95,7 @@ export async function POST(request: NextRequest) {
         content,
         category: category as BlogCategory,
         featured: featured || false,
-        imageUrl: imageUrl || 'https://picsum.photos/seed/new/800/600',
+        imageUrl: imageUrl || "https://picsum.photos/seed/new/800/600",
         authorId: authorId || (session.user as any).id,
       },
       include: {
@@ -114,11 +109,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(post, { status: 201 });
   } catch (error) {
-    console.error('Error creating blog post:', error);
+    console.error("Error creating blog post:", error);
     return NextResponse.json(
-      { error: 'Failed to create blog post' },
+      { error: "Failed to create blog post" },
       { status: 500 }
     );
   }
 }
-

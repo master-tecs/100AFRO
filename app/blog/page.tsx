@@ -6,11 +6,12 @@ import BlogPostCard from '../components/BlogPostCard';
 import { BlogCategory } from '@prisma/client';
 
 interface BlogListPageProps {
-  searchParams: { category?: string };
+  searchParams: Promise<{ category?: string }>;
 }
 
 export default async function BlogListPage({ searchParams }: BlogListPageProps) {
-  const activeCategory = searchParams.category as BlogCategory | undefined;
+  const { category } = await searchParams;
+  const activeCategory = category as BlogCategory | 'All' | undefined;
   
   const categories: (BlogCategory | 'All')[] = ['All', 'Music', 'Culture', 'Lifestyle', 'News', 'Industry'];
 

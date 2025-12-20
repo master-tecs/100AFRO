@@ -33,6 +33,7 @@ interface BlogPost {
   slug: string;
   title: string;
   excerpt: string;
+  content?: string | null;
   category: BlogCategory;
   featured: boolean;
   imageUrl: string;
