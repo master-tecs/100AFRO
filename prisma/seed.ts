@@ -1,3 +1,9 @@
+import { config } from "dotenv";
+import { resolve } from "path";
+
+// Load .env.local file
+config({ path: resolve(process.cwd(), ".env.local") });
+
 import {
   PrismaClient,
   BlogCategory,
@@ -16,33 +22,37 @@ import {
   CURRENT_POLL,
 } from "../data";
 // Edge-compatible password hashing using Web Crypto API
-async function hashPasswordEdge(password: string): Promise<{ hash: string; salt: string }> {
+async function hashPasswordEdge(
+  password: string
+): Promise<{ hash: string; salt: string }> {
   const saltBytes = crypto.getRandomValues(new Uint8Array(16));
   const saltBase64 = btoa(String.fromCharCode(...saltBytes));
-  
+
   const encoder = new TextEncoder();
   const passwordKey = await crypto.subtle.importKey(
-    'raw',
+    "raw",
     encoder.encode(password),
-    'PBKDF2',
+    "PBKDF2",
     false,
-    ['deriveBits']
+    ["deriveBits"]
   );
-  
+
   const hashBuffer = await crypto.subtle.deriveBits(
     {
-      name: 'PBKDF2',
+      name: "PBKDF2",
       salt: saltBytes,
       iterations: 100000,
-      hash: 'SHA-256',
+      hash: "SHA-256",
     },
     passwordKey,
     256
   );
-  
+
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  
+  const hashHex = hashArray
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+
   return { hash: hashHex, salt: saltBase64 };
 }
 
@@ -52,7 +62,9 @@ async function main() {
   console.log("🌱 Starting seed...");
 
   // Hash admin password using Edge-compatible method
-  const { hash: adminPassword, salt: adminSalt } = await hashPasswordEdge("12345678");
+  const { hash: adminPassword, salt: adminSalt } = await hashPasswordEdge(
+    "12345678"
+  );
 
   // Create default admin user
   const adminUser = await prisma.user.upsert({
@@ -237,11 +249,10 @@ async function main() {
 
   // Create poll
   console.log("📊 Creating poll...");
-  await prisma.poll.upsert({
-    where: { id: CURRENT_POLL.id },
-    update: {},
-    create: {
-      id: CURRENT_POLL.id,
+  // Delete existing polls and create new one
+  await prisma.poll.deleteMany({});
+  await prisma.poll.create({
+    data: {
       question: CURRENT_POLL.question,
       options: CURRENT_POLL.options as any,
       active: true,
