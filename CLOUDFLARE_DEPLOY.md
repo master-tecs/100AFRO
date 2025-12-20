@@ -25,10 +25,12 @@ You'll need to set these environment variables in Cloudflare Pages:
 ### Required Variables
 
 1. **Database**
+
    - `DATABASE_URL` - Your Neon PostgreSQL connection string
    - Format: `postgresql://user:password@host/database?sslmode=require`
 
 2. **NextAuth.js**
+
    - `NEXTAUTH_URL` - Your production URL: `https://100afro.com`
    - `NEXTAUTH_SECRET` - Generate a random secret:
      ```bash
@@ -36,6 +38,7 @@ You'll need to set these environment variables in Cloudflare Pages:
      ```
 
 3. **Cloudinary**
+
    - `CLOUDINARY_CLOUD_NAME` - Your Cloudinary cloud name
    - `CLOUDINARY_API_KEY` - Your Cloudinary API key
    - `CLOUDINARY_API_SECRET` - Your Cloudinary API secret
@@ -51,21 +54,25 @@ You'll need to set these environment variables in Cloudflare Pages:
 ### Option A: Connect GitHub Repository
 
 1. **Go to Cloudflare Dashboard**
+
    - Navigate to [Cloudflare Dashboard](https://dash.cloudflare.com)
    - Click on **Workers & Pages** → **Create Application** → **Pages** → **Connect to Git**
 
 2. **Connect Repository**
+
    - Select your GitHub account
    - Choose the repository: `100afro-african-entertainment-hub`
    - Click **Begin setup**
 
 3. **Configure Build Settings**
+
    - **Framework preset**: `Next.js (Static HTML Export)` or `None`
    - **Build command**: `npm run build:cloudflare`
    - **Build output directory**: `.vercel/output/static`
    - **Root directory**: `/` (or leave empty)
 
 4. **Add Environment Variables**
+
    - Scroll down to **Environment variables**
    - Add all the variables listed in Step 2
    - Make sure to add them for **Production** environment
@@ -77,16 +84,19 @@ You'll need to set these environment variables in Cloudflare Pages:
 ### Option B: Deploy via Wrangler CLI
 
 1. **Install Wrangler** (if not already installed):
+
    ```bash
    npm install -g wrangler
    ```
 
 2. **Login to Cloudflare**:
+
    ```bash
    wrangler login
    ```
 
 3. **Build the project**:
+
    ```bash
    npm run build:cloudflare
    ```
@@ -99,6 +109,7 @@ You'll need to set these environment variables in Cloudflare Pages:
 ## Step 4: Configure Custom Domain
 
 1. **In Cloudflare Dashboard**:
+
    - Go to your Pages project
    - Click on **Custom domains**
    - Click **Set up a custom domain**
@@ -106,6 +117,7 @@ You'll need to set these environment variables in Cloudflare Pages:
    - Click **Continue**
 
 2. **DNS Configuration**:
+
    - Cloudflare will automatically configure DNS
    - If needed, add a CNAME record:
      - **Name**: `@` (or `www`)
@@ -119,6 +131,7 @@ You'll need to set these environment variables in Cloudflare Pages:
 ## Step 5: Post-Deployment Setup
 
 1. **Run Database Migrations**:
+
    ```bash
    npm run db:push
    # or
@@ -126,6 +139,7 @@ You'll need to set these environment variables in Cloudflare Pages:
    ```
 
 2. **Seed the Database** (if needed):
+
    ```bash
    npm run db:seed
    ```
@@ -166,15 +180,18 @@ You'll need to set these environment variables in Cloudflare Pages:
 ## Important Notes
 
 ⚠️ **Prisma on Cloudflare Edge**:
+
 - Prisma works on Cloudflare, but you may need to use connection pooling
 - Consider using Neon's connection pooler URL (ends with `-pooler`)
 - Example: `postgresql://user:pass@ep-xxx-pooler.neon.tech/db`
 
 ⚠️ **NextAuth.js**:
+
 - Ensure `NEXTAUTH_URL` matches your production domain exactly
 - Session storage uses JWT (configured in `authOptions`)
 
 ⚠️ **File Uploads**:
+
 - File uploads go directly to Cloudinary
 - No file storage needed on Cloudflare
 
@@ -187,6 +204,7 @@ npm install -D open-next
 ```
 
 Then update your build script:
+
 ```json
 "build:cloudflare": "open-next build"
 ```
@@ -194,6 +212,7 @@ Then update your build script:
 ## Support
 
 For issues specific to:
+
 - **Cloudflare Pages**: [Cloudflare Docs](https://developers.cloudflare.com/pages/)
 - **Next.js on Cloudflare**: [Next.js on Pages](https://developers.cloudflare.com/pages/framework-guides/nextjs/)
 - **Prisma**: [Prisma Docs](https://www.prisma.io/docs)
@@ -202,4 +221,3 @@ For issues specific to:
 
 **Deployment Status**: ✅ Ready for deployment
 **Last Updated**: December 2024
-
