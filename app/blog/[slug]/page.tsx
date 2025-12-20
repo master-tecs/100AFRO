@@ -28,25 +28,8 @@ interface BlogDetailPageProps {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateStaticParams() {
-  // Handle missing DATABASE_URL during build
-  if (!process.env.DATABASE_URL || !prisma) {
-    return [];
-  }
-
-  try {
-    const posts = await prisma.blogPost.findMany({
-      select: { slug: true },
-    });
-
-    return posts.map((post) => ({
-      slug: post.slug,
-    }));
-  } catch (error) {
-    console.warn("Could not generate static params for blog posts:", error);
-    return [];
-  }
-}
+// Note: generateStaticParams cannot be used with edge runtime
+// Routes will be generated dynamically on Cloudflare Pages
 
 export async function generateMetadata({ params }: BlogDetailPageProps) {
   const { slug } = await params;
