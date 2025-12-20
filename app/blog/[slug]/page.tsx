@@ -76,6 +76,12 @@ export async function generateMetadata({ params }: BlogDetailPageProps) {
 
 export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
   const { slug } = await params;
+  
+  // Handle missing DATABASE_URL during build
+  if (!process.env.DATABASE_URL || !prisma) {
+    notFound();
+  }
+  
   const post = await prisma.blogPost.findUnique({
     where: { slug },
     include: {
@@ -116,7 +122,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
     orderBy: {
       createdAt: 'desc',
     },
-  });
+  }) : [];
 
   const trendingPosts = prisma ? await prisma.blogPost.findMany({
     take: 4,
@@ -130,7 +136,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
     orderBy: {
       createdAt: 'desc',
     },
-  });
+  }) : [];
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('en-US', {
