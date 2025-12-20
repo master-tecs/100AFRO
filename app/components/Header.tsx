@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/lib/use-auth';
 import { Menu, X, Youtube, Search, ArrowRight, Shield } from 'lucide-react';
 
 const Header: React.FC = () => {
@@ -12,8 +12,8 @@ const Header: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const pathname = usePathname();
   const router = useRouter();
-  const { data: session } = useSession();
-  const isAdmin = (session?.user as any)?.role === 'ADMIN';
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
 
   const toggleMenu = () => setIsOpen(!isOpen);
   const toggleSearch = () => {

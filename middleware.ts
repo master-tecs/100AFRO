@@ -1,48 +1,40 @@
-import { withAuth } from "next-auth/middleware";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { verifyToken } from "@/lib/auth-edge";
 
-export default withAuth(
-  function middleware(req) {
-    const token = req.nextauth.token;
-    const isAdmin = (token as any)?.role === "ADMIN";
-    const pathname = req.nextUrl.pathname;
+export const runtime = 'experimental-edge';
 
-    // Allow access to login page without authentication
-    if (pathname === "/admin/login") {
-      // If already logged in as admin, redirect to dashboard
-      if (isAdmin) {
-        return NextResponse.redirect(new URL("/admin/dashboard", req.url));
+export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  // Allow access to login page without authentication
+  if (pathname === "/admin/login") {
+    const token = request.cookies.get('auth-token')?.value;
+    if (token) {
+      const user = await verifyToken(token);
+      if (user && user.role === "ADMIN") {
+        return NextResponse.redirect(new URL("/admin/dashboard", request.url));
       }
-      return NextResponse.next();
     }
-
-    // For other admin routes, check if user is admin
-    if (pathname.startsWith("/admin") && !isAdmin) {
-      return NextResponse.redirect(new URL("/admin/login", req.url));
-    }
-
     return NextResponse.next();
-  },
-  {
-    callbacks: {
-      authorized: ({ token, req }) => {
-        const pathname = req.nextUrl.pathname;
-
-        // Always allow access to login page
-        if (pathname === "/admin/login") {
-          return true;
-        }
-
-        // For other admin routes, require admin role
-        if (pathname.startsWith("/admin")) {
-          return (token as any)?.role === "ADMIN";
-        }
-
-        return true;
-      },
-    },
   }
-);
+
+  // For other admin routes, check authentication
+  if (pathname.startsWith("/admin")) {
+    const token = request.cookies.get('auth-token')?.value;
+    
+    if (!token) {
+      return NextResponse.redirect(new URL("/admin/login", request.url));
+    }
+
+    const user = await verifyToken(token);
+    
+    if (!user || user.role !== "ADMIN") {
+      return NextResponse.redirect(new URL("/admin/login", request.url));
+    }
+  }
+
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: ["/admin/:path*"],

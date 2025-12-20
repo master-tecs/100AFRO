@@ -15,26 +15,57 @@ import {
   TRENDING_TOPICS,
   CURRENT_POLL,
 } from "../data";
-import bcrypt from "bcryptjs";
+// Edge-compatible password hashing using Web Crypto API
+async function hashPasswordEdge(password: string): Promise<{ hash: string; salt: string }> {
+  const saltBytes = crypto.getRandomValues(new Uint8Array(16));
+  const saltBase64 = btoa(String.fromCharCode(...saltBytes));
+  
+  const encoder = new TextEncoder();
+  const passwordKey = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(password),
+    'PBKDF2',
+    false,
+    ['deriveBits']
+  );
+  
+  const hashBuffer = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      salt: saltBytes,
+      iterations: 100000,
+      hash: 'SHA-256',
+    },
+    passwordKey,
+    256
+  );
+  
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  return { hash: hashHex, salt: saltBase64 };
+}
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log("🌱 Starting seed...");
 
-  // Hash admin password
-  const adminPassword = await bcrypt.hash("12345678", 10);
+  // Hash admin password using Edge-compatible method
+  const { hash: adminPassword, salt: adminSalt } = await hashPasswordEdge("12345678");
 
   // Create default admin user
   const adminUser = await prisma.user.upsert({
     where: { email: "admin@100afro.com" },
     update: {
-      password: adminPassword, // Update password if user exists
+      password: adminPassword,
+      passwordSalt: adminSalt,
     },
     create: {
       email: "admin@100afro.com",
       name: "Admin User",
       password: adminPassword,
+      passwordSalt: adminSalt,
       role: UserRole.ADMIN,
     },
   });

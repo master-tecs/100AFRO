@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
 import { Lock, User, ArrowLeft, ShieldCheck } from 'lucide-react';
 
 export default function AdminLogin() {
@@ -19,14 +18,18 @@ export default function AdminLogin() {
     setError('');
     
     try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (result?.error) {
-        setError('Invalid credentials. Please try again.');
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Invalid credentials. Please try again.');
         setLoading(false);
       } else {
         router.push('/admin/dashboard');

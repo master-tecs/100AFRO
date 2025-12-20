@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getUser } from "@/lib/get-user";
 import { uploadImage } from "@/lib/cloudinary";
 
 export const runtime = 'edge';
@@ -8,9 +7,9 @@ export const runtime = 'edge';
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession(authOptions);
+    const user = await getUser(request);
 
-    if (!session || (session.user as any)?.role !== "ADMIN") {
+    if (!user || user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

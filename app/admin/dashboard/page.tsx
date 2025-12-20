@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useAuth } from "@/lib/use-auth";
 import Link from "next/link";
 import {
   LayoutDashboard,
@@ -44,13 +44,13 @@ interface BlogPost {
 }
 
 export default function AdminDashboard() {
-  const { data: session, status } = useSession();
+  const { user, loading, logout } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"posts" | "stats" | "videos">(
     "posts"
   );
   const [posts, setPosts] = useState<BlogPost[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [postsLoading, setPostsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
@@ -71,24 +71,18 @@ export default function AdminDashboard() {
   });
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (!loading && !user) {
       router.push("/admin/login");
-    } else if (
-      status === "authenticated" &&
-      (session?.user as any)?.role !== "ADMIN"
-    ) {
+    } else if (!loading && user && user.role !== "ADMIN") {
       router.push("/");
     }
-  }, [status, session, router]);
+  }, [loading, user, router]);
 
   useEffect(() => {
-    if (
-      status === "authenticated" &&
-      (session?.user as any)?.role === "ADMIN"
-    ) {
+    if (user && user.role === "ADMIN") {
       fetchPosts();
     }
-  }, [status, session]);
+  }, [user]);
 
   const fetchPosts = async () => {
     try {
@@ -100,7 +94,7 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error("Error fetching posts:", error);
     } finally {
-      setLoading(false);
+      setPostsLoading(false);
     }
   };
 
@@ -237,7 +231,7 @@ export default function AdminDashboard() {
       p.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (status === "loading" || loading) {
+  if (loading || postsLoading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -248,10 +242,15 @@ export default function AdminDashboard() {
     );
   }
 
-  if (
-    status === "unauthenticated" ||
-    (session?.user as any)?.role !== "ADMIN"
-  ) {
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-afro-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!user || user.role !== "ADMIN") {
     return null;
   }
 
@@ -347,12 +346,12 @@ export default function AdminDashboard() {
 
         <div className="p-4 border-t border-gray-800">
           <div className="mb-3 px-4 py-2 text-xs text-gray-500">
-            <p className="font-bold">{session?.user?.name || "Admin"}</p>
-            <p className="text-gray-600">{session?.user?.email}</p>
+            <p className="font-bold">{user?.name || "Admin"}</p>
+            <p className="text-gray-600">{user?.email}</p>
           </div>
           <button
             onClick={() => {
-              signOut({ callbackUrl: "/" });
+              logout();
             }}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-red-500 hover:bg-red-500/10 transition-all"
           >
