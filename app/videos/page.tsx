@@ -5,8 +5,24 @@ import VideoCard from '../components/VideoCard';
 export const runtime = 'edge';
 
 export default async function VideosPage() {
-  // Handle missing DATABASE_URL during build
-  if (!process.env.DATABASE_URL || !prisma) {
+  // Handle missing DATABASE_URL or Prisma
+  let videos: any[] = [];
+  
+  try {
+    if (process.env.DATABASE_URL && prisma !== null) {
+      videos = await prisma.video.findMany({
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching videos:', error);
+    // Continue with empty array
+  }
+
+  // Show fallback if no data
+  if (videos.length === 0) {
     return (
       <div className="bg-gray-900 min-h-screen pt-12 pb-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -21,12 +37,6 @@ export default async function VideosPage() {
       </div>
     );
   }
-
-  const videos = await prisma.video.findMany({
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
 
   return (
     <div className="bg-gray-900 min-h-screen pt-12 pb-24">

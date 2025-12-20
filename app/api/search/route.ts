@@ -16,6 +16,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    if (!prisma) {
+      return NextResponse.json(
+        { error: 'Database not available' },
+        { status: 503 }
+      );
+    }
+
     const results: any = {
       blogs: [],
       videos: [],

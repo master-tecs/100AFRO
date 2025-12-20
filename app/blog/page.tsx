@@ -17,34 +17,34 @@ export default async function BlogListPage({ searchParams }: BlogListPageProps) 
   
   const categories: (BlogCategory | 'All')[] = ['All', 'Music', 'Culture', 'Lifestyle', 'News', 'Industry'];
 
-  // Handle missing DATABASE_URL during build
-  if (!process.env.DATABASE_URL || !prisma) {
-    return (
-      <div className="min-h-screen bg-gray-950 text-white p-8">
-        <h1 className="text-2xl font-bold mb-4">Blog</h1>
-        <p>Database connection not available. Please check your environment variables.</p>
-      </div>
-    );
-  }
+  // Handle missing DATABASE_URL or Prisma
+  let posts: any[] = [];
+  
+  try {
+    if (process.env.DATABASE_URL && prisma !== null) {
+      const where: any = {};
+      if (activeCategory && activeCategory !== 'All') {
+        where.category = activeCategory;
+      }
 
-  const where: any = {};
-  if (activeCategory && activeCategory !== 'All') {
-    where.category = activeCategory;
-  }
-
-  const posts = await prisma.blogPost.findMany({
-    where,
-    include: {
-      author: {
-        select: {
-          name: true,
+      posts = await prisma.blogPost.findMany({
+        where,
+        include: {
+          author: {
+            select: {
+              name: true,
+            },
+          },
         },
-      },
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching blog posts:', error);
+    // Continue with empty array
+  }
 
   return (
     <div className="bg-gray-900 min-h-screen pt-12 pb-24">

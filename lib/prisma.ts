@@ -38,5 +38,11 @@ if (process.env.NODE_ENV !== "production" && prismaInstance) {
   globalForPrisma.prisma = prismaInstance;
 }
 
-// Export prisma, but it might be null during build time
-export const prisma = prismaInstance as PrismaClient;
+// Export prisma, but it might be null during build time or if DATABASE_URL is missing
+// Use a helper function to safely check if prisma is available
+export const prisma = prismaInstance as PrismaClient | null;
+
+// Helper function to check if Prisma is available
+export function isPrismaAvailable(): boolean {
+  return prisma !== null && process.env.DATABASE_URL !== undefined;
+}

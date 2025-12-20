@@ -17,6 +17,10 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    if (!prisma) {
+      return NextResponse.json({ error: "Database not available" }, { status: 503 });
+    }
+
     const { id } = await params;
     const body = await request.json();
     const { title, excerpt, content, category, featured, imageUrl } = body;
@@ -71,6 +75,10 @@ export async function DELETE(
 
     if (!user || user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!prisma) {
+      return NextResponse.json({ error: "Database not available" }, { status: 503 });
     }
 
     const { id } = await params;

@@ -5,6 +5,11 @@ import { hashPassword } from '../lib/auth-edge';
 async function migratePasswords() {
   console.log('🔄 Starting password migration...');
   
+  if (!prisma) {
+    console.error('Prisma client is not available');
+    return;
+  }
+  
   const users = await prisma.user.findMany({
     where: {
       password: {
@@ -35,7 +40,9 @@ async function migratePasswords() {
   }
 
   console.log('✅ Password migration complete');
-  await prisma.$disconnect();
+  if (prisma) {
+    await prisma.$disconnect();
+  }
 }
 
 migratePasswords().catch(console.error);

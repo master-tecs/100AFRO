@@ -6,8 +6,25 @@ import { ArrowUp, ArrowDown, Minus, Sparkles } from 'lucide-react';
 export const runtime = 'edge';
 
 export default async function ChartsPage() {
-  // Handle missing DATABASE_URL during build
-  if (!process.env.DATABASE_URL || !prisma) {
+  // Handle missing DATABASE_URL or Prisma
+  let charts: any[] = [];
+  
+  try {
+    if (process.env.DATABASE_URL && prisma !== null) {
+      charts = await prisma.chartEntry.findMany({
+        orderBy: [
+          { type: 'asc' },
+          { rank: 'asc' },
+        ],
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching charts:', error);
+    // Continue with empty array
+  }
+
+  // Show fallback if no data
+  if (charts.length === 0) {
     return (
       <div className="bg-gray-900 min-h-screen pt-12 pb-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -22,13 +39,6 @@ export default async function ChartsPage() {
       </div>
     );
   }
-
-  const charts = await prisma.chartEntry.findMany({
-    orderBy: [
-      { type: 'asc' },
-      { rank: 'asc' },
-    ],
-  });
 
   const songs = charts.filter(c => c.type === ChartType.song);
   const albums = charts.filter(c => c.type === ChartType.album);

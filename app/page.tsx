@@ -6,63 +6,88 @@ import BlogPostCard from './components/BlogPostCard';
 import VideoCard from './components/VideoCard';
 
 async function getHomeData() {
-  // Handle missing DATABASE_URL during build
-  if (!process.env.DATABASE_URL || !prisma) {
-    return {
-      featuredPost: null,
-      subFeaturedPosts: [],
-      industryPosts: [],
-      latestVideos: [],
-      trendingPosts: [],
-      featuredArtists: [],
-      trendingTopics: [],
-      currentPoll: null,
-    };
+  // Initialize with empty data
+  let featuredPost = null;
+  let subFeaturedPosts: any[] = [];
+  let industryPosts: any[] = [];
+  let latestVideos: any[] = [];
+  let trendingPosts: any[] = [];
+  let featuredArtists: any[] = [];
+  let trendingTopics: any[] = [];
+  let currentPoll = null;
+
+  // Try to fetch data if DATABASE_URL and prisma are available
+  try {
+    if (process.env.DATABASE_URL && prisma !== null) {
+      const prismaClient = prisma; // Type guard
+      const [fetchedFeaturedPost, fetchedSubFeaturedPosts, fetchedIndustryPosts, fetchedLatestVideos, fetchedTrendingPosts, fetchedFeaturedArtists, fetchedTrendingTopics, fetchedCurrentPoll] = await Promise.all([
+        prismaClient.blogPost.findFirst({
+          where: { featured: true },
+          include: { author: { select: { name: true } } },
+          orderBy: { createdAt: 'desc' },
+        }),
+        prismaClient.blogPost.findMany({
+          where: { featured: false },
+          include: { author: { select: { name: true } } },
+          take: 2,
+          orderBy: { createdAt: 'desc' },
+        }),
+        prismaClient.blogPost.findMany({
+          where: { category: 'Industry' },
+          include: { author: { select: { name: true } } },
+          take: 3,
+          orderBy: { createdAt: 'desc' },
+        }),
+        prismaClient.video.findMany({
+          take: 4,
+          orderBy: { createdAt: 'desc' },
+        }),
+        prismaClient.blogPost.findMany({
+          take: 4,
+          include: { author: { select: { name: true } } },
+          orderBy: { createdAt: 'desc' },
+        }),
+        prismaClient.artist.findMany({
+          take: 6,
+        }),
+        prismaClient.trendingTopic.findMany({
+          take: 5,
+        }),
+        prismaClient.poll.findFirst({
+          where: { active: true },
+        }),
+      ]);
+
+      featuredPost = fetchedFeaturedPost;
+      subFeaturedPosts = fetchedSubFeaturedPosts;
+      industryPosts = fetchedIndustryPosts;
+      latestVideos = fetchedLatestVideos;
+      trendingPosts = fetchedTrendingPosts;
+      featuredArtists = fetchedFeaturedArtists;
+      trendingTopics = fetchedTrendingTopics;
+      currentPoll = fetchedCurrentPoll;
+    }
+  } catch (error) {
+    console.error('Error fetching home data:', error);
+    // Continue with empty data
   }
 
-  const [featuredPost, subFeaturedPosts, industryPosts, latestVideos, trendingPosts, featuredArtists, trendingTopics, currentPoll] = await Promise.all([
-    prisma.blogPost.findFirst({
-      where: { featured: true },
-      include: { author: { select: { name: true } } },
-      orderBy: { createdAt: 'desc' },
-    }),
-    prisma.blogPost.findMany({
-      where: { featured: false },
-      include: { author: { select: { name: true } } },
-      take: 2,
-      orderBy: { createdAt: 'desc' },
-    }),
-    prisma.blogPost.findMany({
-      where: { category: 'Industry' },
-      include: { author: { select: { name: true } } },
-      take: 3,
-      orderBy: { createdAt: 'desc' },
-    }),
-    prisma.video.findMany({
-      take: 4,
-      orderBy: { createdAt: 'desc' },
-    }),
-    prisma.blogPost.findMany({
-      take: 4,
-      include: { author: { select: { name: true } } },
-      orderBy: { createdAt: 'desc' },
-    }),
-    prisma.artist.findMany({
-      take: 6,
-    }),
-    prisma.trendingTopic.findMany({
-      take: 5,
-    }),
-    prisma.poll.findFirst({
-      where: { active: true },
-    }),
-  ]);
-
-  const featuredVideo = latestVideos.length > 0 
-    ? (await prisma.video.findFirst({
-        where: { featured: true },
-      }) || latestVideos[0])
-    : null;
+  // Get featured video
+  let featuredVideo = null;
+  if (latestVideos.length > 0) {
+    if (prisma !== null) {
+      try {
+        featuredVideo = await prisma.video.findFirst({
+          where: { featured: true },
+        }) || latestVideos[0];
+      } catch (error) {
+        console.error('Error fetching featured video:', error);
+        featuredVideo = latestVideos[0];
+      }
+    } else {
+      featuredVideo = latestVideos[0];
+    }
+  }
 
   return {
     featuredPost: featuredPost || (subFeaturedPosts.length > 0 ? subFeaturedPosts[0] : null),

@@ -15,6 +15,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    if (!prisma) {
+      return NextResponse.json(
+        { error: 'Database not available' },
+        { status: 503 }
+      );
+    }
+
     const comments = await prisma.comment.findMany({
       where: { postId },
       orderBy: {
@@ -41,6 +48,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'postId, author, and content are required' },
         { status: 400 }
+      );
+    }
+
+    if (!prisma) {
+      return NextResponse.json(
+        { error: 'Database not available' },
+        { status: 503 }
       );
     }
 

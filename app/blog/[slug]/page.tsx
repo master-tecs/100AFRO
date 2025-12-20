@@ -77,66 +77,81 @@ export async function generateMetadata({ params }: BlogDetailPageProps) {
 export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
   const { slug } = await params;
   
-  // Handle missing DATABASE_URL during build
-  if (!process.env.DATABASE_URL || !prisma) {
-    notFound();
-  }
+  // Handle missing DATABASE_URL or Prisma
+  let post = null;
   
-  const post = await prisma.blogPost.findUnique({
-    where: { slug },
-    include: {
-      author: {
-        select: {
-          id: true,
-          name: true,
-          image: true,
+  try {
+    if (process.env.DATABASE_URL && prisma !== null) {
+      post = await prisma.blogPost.findUnique({
+        where: { slug },
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+            },
+          },
+          comments: {
+            orderBy: {
+              createdAt: 'desc',
+            },
+            take: 50,
+          },
         },
-      },
-      comments: {
-        orderBy: {
-          createdAt: 'desc',
-        },
-        take: 50,
-      },
-    },
-  });
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching blog post:', error);
+  }
 
   if (!post) {
     notFound();
   }
 
   // Only fetch related posts if prisma is available
-  const relatedPosts = prisma ? await prisma.blogPost.findMany({
-    where: {
-      category: post.category,
-      id: { not: post.id },
-    },
-    include: {
-      author: {
-        select: {
-          name: true,
-        },
-      },
-    },
-    take: 3,
-    orderBy: {
-      createdAt: 'desc',
-    },
-  }) : [];
-
-  const trendingPosts = prisma ? await prisma.blogPost.findMany({
-    take: 4,
-    include: {
-      author: {
-        select: {
-          name: true,
-        },
-      },
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  }) : [];
+  let relatedPosts: any[] = [];
+  let trendingPosts: any[] = [];
+  
+  try {
+    if (prisma !== null) {
+      [relatedPosts, trendingPosts] = await Promise.all([
+        prisma.blogPost.findMany({
+          where: {
+            category: post.category,
+            id: { not: post.id },
+          },
+          include: {
+            author: {
+              select: {
+                name: true,
+              },
+            },
+          },
+          take: 3,
+          orderBy: {
+            createdAt: 'desc',
+          },
+        }),
+        prisma.blogPost.findMany({
+          take: 4,
+          include: {
+            author: {
+              select: {
+                name: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        }),
+      ]);
+    }
+  } catch (error) {
+    console.error('Error fetching related posts:', error);
+    // Continue with empty arrays
+  }
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('en-US', {

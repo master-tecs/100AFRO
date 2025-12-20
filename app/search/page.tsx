@@ -16,64 +16,60 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   let blogs: any[] = [];
   let videos: any[] = [];
 
-  // Handle missing DATABASE_URL during build
-  if (!process.env.DATABASE_URL || !prisma) {
-    return (
-      <div className="bg-gray-900 min-h-screen pt-12 pb-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl font-display font-bold text-white mb-8">Search Results</h1>
-          <p className="text-gray-400">Search functionality will be available once the database is connected.</p>
-        </div>
-      </div>
-    );
-  }
-
+  // Try to search if DATABASE_URL and prisma are available
   if (query && query.length >= 2) {
-    // Full-text search for blog posts
-    const blogPosts = await prisma.$queryRaw`
-      SELECT 
-        id, slug, title, excerpt, "imageUrl", category, featured, "createdAt",
-        ts_rank(
-          to_tsvector('english', title || ' ' || excerpt || ' ' || COALESCE(content, '')),
-          plainto_tsquery('english', ${query})
-        ) as rank
-      FROM blog_posts
-      WHERE 
-        to_tsvector('english', title || ' ' || excerpt || ' ' || COALESCE(content, '')) 
-        @@ plainto_tsquery('english', ${query})
-      ORDER BY rank DESC
-      LIMIT 20
-    `;
+    try {
+      if (process.env.DATABASE_URL && prisma !== null) {
+        // Full-text search for blog posts
+        const blogPosts = await prisma.$queryRaw`
+          SELECT 
+            id, slug, title, excerpt, "imageUrl", category, featured, "createdAt",
+            ts_rank(
+              to_tsvector('english', title || ' ' || excerpt || ' ' || COALESCE(content, '')),
+              plainto_tsquery('english', ${query})
+            ) as rank
+          FROM blog_posts
+          WHERE 
+            to_tsvector('english', title || ' ' || excerpt || ' ' || COALESCE(content, '')) 
+            @@ plainto_tsquery('english', ${query})
+          ORDER BY rank DESC
+          LIMIT 20
+        `;
 
-    const blogIds = (blogPosts as any[]).map((p: any) => p.id);
-    if (blogIds.length > 0) {
-      blogs = await prisma.blogPost.findMany({
-        where: {
-          id: { in: blogIds },
-        },
-        include: {
-          author: {
-            select: {
-              name: true,
+        const blogIds = (blogPosts as any[]).map((p: any) => p.id);
+        if (blogIds.length > 0) {
+          blogs = await prisma.blogPost.findMany({
+            where: {
+              id: { in: blogIds },
             },
-          },
-        },
-      });
-    }
+            include: {
+              author: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          });
+        }
 
-    // Search videos
-    videos = await prisma.video.findMany({
-      where: {
-        OR: [
-          { title: { contains: query, mode: 'insensitive' } },
-          { tags: { has: query } },
-        ],
-      },
-      take: 20,
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+        // Search videos
+        videos = await prisma.video.findMany({
+          where: {
+            OR: [
+              { title: { contains: query, mode: 'insensitive' } },
+              { tags: { has: query } },
+            ],
+          },
+          take: 20,
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Error performing search:', error);
+      // Continue with empty arrays
+    }
   }
 
   return (

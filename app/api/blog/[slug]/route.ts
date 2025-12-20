@@ -8,6 +8,13 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    if (!prisma) {
+      return NextResponse.json(
+        { error: 'Database not available' },
+        { status: 503 }
+      );
+    }
+
     const { slug } = await params;
     const post = await prisma.blogPost.findUnique({
       where: { slug },

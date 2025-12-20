@@ -10,6 +10,11 @@ async function createAdmin() {
   const hashedPassword = await bcrypt.hash(password, 10);
 
   try {
+    if (!prisma) {
+      console.error('Prisma client is not available');
+      return;
+    }
+
     // Check if admin already exists
     const existing = await prisma.user.findUnique({
       where: { email },
@@ -49,7 +54,9 @@ async function createAdmin() {
   } catch (error) {
     console.error("Error creating admin user:", error);
   } finally {
-    await prisma.$disconnect();
+    if (prisma) {
+      await prisma.$disconnect();
+    }
   }
 }
 

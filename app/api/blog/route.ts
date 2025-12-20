@@ -13,6 +13,13 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
 
+    if (!prisma) {
+      return NextResponse.json(
+        { error: 'Database not available' },
+        { status: 503 }
+      );
+    }
+
     const where: any = {};
     if (category) {
       where.category = category;
@@ -63,6 +70,13 @@ export async function POST(request: NextRequest) {
     // TODO: Add authentication check for admin
     const body = await request.json();
     const { title, slug, excerpt, content, category, featured, imageUrl, authorId } = body;
+
+    if (!prisma) {
+      return NextResponse.json(
+        { error: 'Database not available' },
+        { status: 503 }
+      );
+    }
 
     const post = await prisma.blogPost.create({
       data: {
