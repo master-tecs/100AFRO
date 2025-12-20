@@ -15,17 +15,36 @@ interface BlogDetailPageProps {
 }
 
 export async function generateStaticParams() {
-  const posts = await prisma.blogPost.findMany({
-    select: { slug: true },
-  });
+  // Handle missing DATABASE_URL during build
+  if (!process.env.DATABASE_URL || !prisma) {
+    return [];
+  }
   
-  return posts.map((post) => ({
-    slug: post.slug,
-  }));
+  try {
+    const posts = await prisma.blogPost.findMany({
+      select: { slug: true },
+    });
+    
+    return posts.map((post) => ({
+      slug: post.slug,
+    }));
+  } catch (error) {
+    console.warn('Could not generate static params for blog posts:', error);
+    return [];
+  }
 }
 
 export async function generateMetadata({ params }: BlogDetailPageProps) {
   const { slug } = await params;
+  
+  // Handle missing DATABASE_URL during build
+  if (!process.env.DATABASE_URL || !prisma) {
+    return {
+      title: 'Blog Post | 100AFRO',
+      description: '100AFRO Blog',
+    };
+  }
+  
   const post = await prisma.blogPost.findUnique({
     where: { slug },
     include: { author: { select: { name: true } } },
@@ -80,7 +99,8 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
     notFound();
   }
 
-  const relatedPosts = await prisma.blogPost.findMany({
+  // Only fetch related posts if prisma is available
+  const relatedPosts = prisma ? await prisma.blogPost.findMany({
     where: {
       category: post.category,
       id: { not: post.id },
@@ -98,7 +118,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
     },
   });
 
-  const trendingPosts = await prisma.blogPost.findMany({
+  const trendingPosts = prisma ? await prisma.blogPost.findMany({
     take: 4,
     include: {
       author: {

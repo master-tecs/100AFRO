@@ -1,16 +1,9 @@
 import { MetadataRoute } from 'next';
-import { prisma } from '@/lib/prisma';
+
+export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-
-  // Get all blog posts
-  const posts = await prisma.blogPost.findMany({
-    select: {
-      slug: true,
-      updatedAt: true,
-    },
-  });
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://100afro.com';
 
   // Static routes
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -52,13 +45,35 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  // Dynamic blog post routes
-  const blogRoutes: MetadataRoute.Sitemap = posts.map((post) => ({
-    url: `${baseUrl}/blog/${post.slug}`,
-    lastModified: post.updatedAt,
-    changeFrequency: 'weekly' as const,
-    priority: 0.7,
-  }));
+  // Try to get blog posts, but handle gracefully if database is not available
+  let blogRoutes: MetadataRoute.Sitemap = [];
+  
+  try {
+    // Only try to access database if DATABASE_URL is available
+    if (process.env.DATABASE_URL) {
+      const { prisma } = await import('@/lib/prisma');
+      
+      // Check if prisma is available (might be null during build)
+      if (prisma) {
+        const posts = await prisma.blogPost.findMany({
+          select: {
+            slug: true,
+            updatedAt: true,
+          },
+        });
+
+        blogRoutes = posts.map((post) => ({
+          url: `${baseUrl}/blog/${post.slug}`,
+          lastModified: post.updatedAt,
+          changeFrequency: 'weekly' as const,
+          priority: 0.7,
+        }));
+      }
+    }
+  } catch (error) {
+    // If database access fails, just return static routes
+    console.warn('Could not fetch blog posts for sitemap:', error);
+  }
 
   return [...staticRoutes, ...blogRoutes];
 }

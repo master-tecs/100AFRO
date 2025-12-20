@@ -17,6 +17,16 @@ export default async function BlogListPage({ searchParams }: BlogListPageProps) 
   
   const categories: (BlogCategory | 'All')[] = ['All', 'Music', 'Culture', 'Lifestyle', 'News', 'Industry'];
 
+  // Handle missing DATABASE_URL during build
+  if (!process.env.DATABASE_URL || !prisma) {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white p-8">
+        <h1 className="text-2xl font-bold mb-4">Blog</h1>
+        <p>Database connection not available. Please check your environment variables.</p>
+      </div>
+    );
+  }
+
   const where: any = {};
   if (activeCategory && activeCategory !== 'All') {
     where.category = activeCategory;
