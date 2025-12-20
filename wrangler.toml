@@ -1,4 +1,5 @@
-name = "100afro"
+# wrangler.toml
+name = '100afro-prro'
 compatibility_date = "2024-01-01"
 pages_build_output_dir = ".vercel/output/static"
 
