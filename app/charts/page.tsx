@@ -3,7 +3,26 @@ import { prisma } from '@/lib/prisma';
 import { ChartType, ChartTrend } from '@prisma/client';
 import { ArrowUp, ArrowDown, Minus, Sparkles } from 'lucide-react';
 
+export const runtime = 'edge';
+
 export default async function ChartsPage() {
+  // Handle missing DATABASE_URL during build
+  if (!process.env.DATABASE_URL || !prisma) {
+    return (
+      <div className="bg-gray-900 min-h-screen pt-12 pb-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-12">
+            <h1 className="text-4xl md:text-5xl font-display font-bold text-white mb-4">Top Charts</h1>
+            <p className="text-gray-400 text-lg">The hottest African music right now</p>
+          </div>
+          <div className="text-center py-20">
+            <p className="text-gray-400 text-xl">Charts will be available once the database is connected.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const charts = await prisma.chartEntry.findMany({
     orderBy: [
       { type: 'asc' },

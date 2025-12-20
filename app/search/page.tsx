@@ -16,6 +16,18 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   let blogs: any[] = [];
   let videos: any[] = [];
 
+  // Handle missing DATABASE_URL during build
+  if (!process.env.DATABASE_URL || !prisma) {
+    return (
+      <div className="bg-gray-900 min-h-screen pt-12 pb-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h1 className="text-4xl font-display font-bold text-white mb-8">Search Results</h1>
+          <p className="text-gray-400">Search functionality will be available once the database is connected.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (query && query.length >= 2) {
     // Full-text search for blog posts
     const blogPosts = await prisma.$queryRaw`

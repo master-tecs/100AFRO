@@ -6,6 +6,20 @@ import BlogPostCard from './components/BlogPostCard';
 import VideoCard from './components/VideoCard';
 
 async function getHomeData() {
+  // Handle missing DATABASE_URL during build
+  if (!process.env.DATABASE_URL || !prisma) {
+    return {
+      featuredPost: null,
+      subFeaturedPosts: [],
+      industryPosts: [],
+      latestVideos: [],
+      trendingPosts: [],
+      featuredArtists: [],
+      trendingTopics: [],
+      currentPoll: null,
+    };
+  }
+
   const [featuredPost, subFeaturedPosts, industryPosts, latestVideos, trendingPosts, featuredArtists, trendingTopics, currentPoll] = await Promise.all([
     prisma.blogPost.findFirst({
       where: { featured: true },
@@ -44,12 +58,14 @@ async function getHomeData() {
     }),
   ]);
 
-  const featuredVideo = await prisma.video.findFirst({
-    where: { featured: true },
-  }) || latestVideos[0];
+  const featuredVideo = latestVideos.length > 0 
+    ? (await prisma.video.findFirst({
+        where: { featured: true },
+      }) || latestVideos[0])
+    : null;
 
   return {
-    featuredPost: featuredPost || subFeaturedPosts[0],
+    featuredPost: featuredPost || (subFeaturedPosts.length > 0 ? subFeaturedPosts[0] : null),
     subFeaturedPosts: subFeaturedPosts.slice(0, 2),
     industryPosts,
     latestVideos,
