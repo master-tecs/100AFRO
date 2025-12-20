@@ -71,6 +71,9 @@ You'll need to set these environment variables in Cloudflare Pages:
    - **Build output directory**: `.vercel/output/static`
    - **Root directory**: `/` (or leave empty)
    - **Node version**: `22.x` (or latest LTS)
+   - **Deploy command**: (LEAVE EMPTY - Cloudflare Pages deploys automatically)
+
+   **Important**: Do NOT set a deploy command. Cloudflare Pages automatically deploys the build output. If you see a deploy command field, leave it empty or remove it.
 
    **Note**: The `.npmrc` file in the repository is configured to use `legacy-peer-deps=true` to handle dependency conflicts.
 
