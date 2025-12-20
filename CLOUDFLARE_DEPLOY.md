@@ -66,10 +66,13 @@ You'll need to set these environment variables in Cloudflare Pages:
 
 3. **Configure Build Settings**
 
-   - **Framework preset**: `Next.js (Static HTML Export)` or `None`
+   - **Framework preset**: `None` (custom build)
    - **Build command**: `npm run build:cloudflare`
    - **Build output directory**: `.vercel/output/static`
    - **Root directory**: `/` (or leave empty)
+   - **Node version**: `22.x` (or latest LTS)
+
+   **Note**: The `.npmrc` file in the repository is configured to use `legacy-peer-deps=true` to handle dependency conflicts.
 
 4. **Add Environment Variables**
 

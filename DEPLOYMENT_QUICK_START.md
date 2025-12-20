@@ -3,6 +3,7 @@
 ## 🚀 Quick Deployment Steps
 
 ### 1. Push to GitHub
+
 ```bash
 git add .
 git commit -m "Ready for Cloudflare deployment"
@@ -16,10 +17,14 @@ git push origin main
 3. Click **Connect to Git**
 4. Select your GitHub repository
 5. Configure build settings:
-   - **Framework preset**: `None` (or `Next.js (Static HTML Export)`)
+
+   - **Framework preset**: `None` (custom build)
    - **Build command**: `npm run build:cloudflare`
    - **Build output directory**: `.vercel/output/static`
    - **Root directory**: `/` (leave empty)
+   - **Node version**: `22.x` (or latest LTS)
+
+   **Note**: The project uses Next.js 15 and includes a `.npmrc` file for dependency resolution.
 
 ### 3. Add Environment Variables
 
@@ -61,4 +66,3 @@ Click **Save and Deploy** and wait for the build to complete.
 ## 🆘 Troubleshooting
 
 See `CLOUDFLARE_DEPLOY.md` for detailed troubleshooting guide.
-
