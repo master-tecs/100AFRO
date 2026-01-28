@@ -50,11 +50,22 @@ interface BlogPost {
   createdAt: Date;
 }
 
+interface AdminPollListItem {
+  id: string;
+  question: string;
+  options: any;
+  active: boolean;
+  startsAt?: string | Date | null;
+  endsAt?: string | Date | null;
+  updatedAt: string | Date;
+  totalVotes?: number;
+}
+
 export default function AdminDashboard() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<
-    "posts" | "comments" | "stats" | "videos"
+    "posts" | "comments" | "stats" | "videos" | "polls"
   >(
     "posts"
   );
@@ -85,6 +96,32 @@ export default function AdminDashboard() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Polls (Admin)
+  const [pollsLoading, setPollsLoading] = useState(false);
+  const [polls, setPolls] = useState<AdminPollListItem[]>([]);
+  const [isPollModalOpen, setIsPollModalOpen] = useState(false);
+  const [pollSaving, setPollSaving] = useState(false);
+  const [editingPoll, setEditingPoll] = useState<AdminPollListItem | null>(null);
+  const [pollDraft, setPollDraft] = useState<{
+    question: string;
+    options: Array<{ id: string; text: string }>;
+    startsAt: string;
+    endsAt: string;
+    active: boolean;
+  }>({
+    question: "",
+    options: [
+      { id: "opt_1", text: "" },
+      { id: "opt_2", text: "" },
+    ],
+    startsAt: "",
+    endsAt: "",
+    active: false,
+  });
+  const [pollResults, setPollResults] = useState<any | null>(null);
+  const [pollResultsLoading, setPollResultsLoading] = useState(false);
+  const [pollResultsForId, setPollResultsForId] = useState<string | null>(null);
 
   // New Post Form State
   const [newPost, setNewPost] = useState({
@@ -123,6 +160,13 @@ export default function AdminDashboard() {
     fetchComments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, commentsTabStatus, commentsPage, user]);
+
+  useEffect(() => {
+    if (!user || user.role !== "ADMIN") return;
+    if (activeTab !== "polls") return;
+    fetchPolls();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, user]);
 
   useEffect(() => {
     if (!toast) return;
@@ -246,6 +290,160 @@ export default function AdminDashboard() {
       console.error("Error fetching posts:", error);
     } finally {
       setPostsLoading(false);
+    }
+  };
+
+  const fetchPolls = async () => {
+    setPollsLoading(true);
+    try {
+      const res = await fetch("/api/admin/polls");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast("error", err.error || "Failed to load polls");
+        setPolls([]);
+        return;
+      }
+      const data = await res.json();
+      setPolls(data.polls || []);
+    } catch (e) {
+      showToast("error", "Failed to load polls");
+      setPolls([]);
+    } finally {
+      setPollsLoading(false);
+    }
+  };
+
+  const openCreatePoll = () => {
+    setEditingPoll(null);
+    setPollResults(null);
+    setPollDraft({
+      question: "",
+      options: [
+        { id: "opt_1", text: "" },
+        { id: "opt_2", text: "" },
+      ],
+      startsAt: "",
+      endsAt: "",
+      active: false,
+    });
+    setIsPollModalOpen(true);
+  };
+
+  const openEditPoll = async (poll: AdminPollListItem) => {
+    setEditingPoll(poll);
+    setPollResults(null);
+    const options = Array.isArray(poll.options)
+      ? poll.options
+          .map((o: any, idx: number) => ({
+            id: String(o.id || `opt_${idx + 1}`),
+            text: String(o.text || ""),
+          }))
+          .filter((o: any) => o.id && o.text !== undefined)
+      : [
+          { id: "opt_1", text: "" },
+          { id: "opt_2", text: "" },
+        ];
+    setPollDraft({
+      question: poll.question || "",
+      options: options.length >= 2 ? options : [{ id: "opt_1", text: "" }, { id: "opt_2", text: "" }],
+      startsAt: poll.startsAt ? new Date(poll.startsAt as any).toISOString().slice(0, 16) : "",
+      endsAt: poll.endsAt ? new Date(poll.endsAt as any).toISOString().slice(0, 16) : "",
+      active: !!poll.active,
+    });
+    setIsPollModalOpen(true);
+  };
+
+  const savePoll = async () => {
+    if (!pollDraft.question.trim()) {
+      showToast("error", "Poll question is required.");
+      return;
+    }
+    const cleanedOptions = pollDraft.options
+      .map((o) => ({ id: o.id.trim(), text: o.text.trim() }))
+      .filter((o) => o.id && o.text);
+    if (cleanedOptions.length < 2) {
+      showToast("error", "Add at least 2 options.");
+      return;
+    }
+
+    setPollSaving(true);
+    try {
+      const payload = {
+        question: pollDraft.question.trim(),
+        options: cleanedOptions,
+        startsAt: pollDraft.startsAt ? new Date(pollDraft.startsAt).toISOString() : null,
+        endsAt: pollDraft.endsAt ? new Date(pollDraft.endsAt).toISOString() : null,
+        active: pollDraft.active,
+      };
+
+      const res = await fetch(editingPoll ? `/api/admin/polls/${editingPoll.id}` : "/api/admin/polls", {
+        method: editingPoll ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast("error", err.error || "Failed to save poll");
+        return;
+      }
+      showToast("success", editingPoll ? "Poll updated." : "Poll created.");
+      setIsPollModalOpen(false);
+      await fetchPolls();
+    } catch (e) {
+      showToast("error", "Failed to save poll");
+    } finally {
+      setPollSaving(false);
+    }
+  };
+
+  const deletePoll = async (id: string) => {
+    if (!window.confirm("Delete this poll? This cannot be undone.")) return;
+    try {
+      const res = await fetch(`/api/admin/polls/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast("error", err.error || "Failed to delete poll");
+        return;
+      }
+      showToast("success", "Poll deleted.");
+      await fetchPolls();
+    } catch {
+      showToast("error", "Failed to delete poll");
+    }
+  };
+
+  const activatePoll = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/polls/${id}/activate`, { method: "POST" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast("error", err.error || "Failed to activate poll");
+        return;
+      }
+      showToast("success", "Poll activated.");
+      await fetchPolls();
+    } catch {
+      showToast("error", "Failed to activate poll");
+    }
+  };
+
+  const loadPollResults = async (id: string) => {
+    setPollResultsForId(id);
+    setPollResults(null);
+    setPollResultsLoading(true);
+    try {
+      const res = await fetch(`/api/admin/polls/${id}`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast("error", err.error || "Failed to load results");
+        return;
+      }
+      const data = await res.json();
+      setPollResults(data.poll);
+    } catch {
+      showToast("error", "Failed to load results");
+    } finally {
+      setPollResultsLoading(false);
     }
   };
 
@@ -564,6 +762,21 @@ export default function AdminDashboard() {
               }`}
             >
               <MessageSquare size={20} /> Moderation
+            </button>
+          )}
+          {user?.role === "ADMIN" && (
+            <button
+              onClick={() => {
+                setActiveTab("polls");
+                setIsSidebarOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${
+                activeTab === "polls"
+                  ? "bg-afro-primary text-black"
+                  : "text-gray-400 hover:bg-gray-800 hover:text-white"
+              }`}
+            >
+              <BarChart size={20} /> Polls
             </button>
           )}
           <div className="h-px bg-gray-800 my-4 mx-2"></div>
@@ -1072,7 +1285,7 @@ export default function AdminDashboard() {
                               onClick={() => moderateComment(c.id, "REJECTED")}
                               className="px-3 py-2 rounded-lg bg-yellow-500/15 text-yellow-200 border border-yellow-500/30 hover:bg-yellow-500/25 text-sm font-bold"
                             >
-                              Reject
+                              Remove
                             </button>
                           )}
                           {commentsTabStatus !== "SPAM" && (
@@ -1112,6 +1325,143 @@ export default function AdminDashboard() {
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Polls Tab (Admin) */}
+          {activeTab === "polls" && user.role === "ADMIN" && (
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 lg:p-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-xl lg:text-2xl font-display font-bold text-white">
+                    Polls
+                  </h2>
+                  <p className="text-gray-500 text-sm mt-1">
+                    Create a Poll of the Week and activate exactly one.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={openCreatePoll}
+                    className="bg-afro-primary text-black font-bold px-4 py-2 rounded-xl hover:bg-white transition-colors flex items-center gap-2"
+                  >
+                    <Plus size={18} /> New Poll
+                  </button>
+                </div>
+              </div>
+
+              {pollsLoading ? (
+                <div className="py-10 text-center text-gray-400">Loading polls...</div>
+              ) : polls.length === 0 ? (
+                <div className="py-10 text-center text-gray-500">
+                  No polls yet. Create one to start.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {polls.map((p) => (
+                    <div
+                      key={p.id}
+                      className="bg-gray-950 border border-gray-800 rounded-xl p-4"
+                    >
+                      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <span className="text-white font-bold truncate">{p.question}</span>
+                            {p.active && (
+                              <span className="text-xs font-bold px-2 py-1 rounded-full bg-green-500/15 text-green-200 border border-green-500/30">
+                                Active
+                              </span>
+                            )}
+                            <span className="text-xs text-gray-500">
+                              Votes: <span className="text-gray-300 font-bold">{p.totalVotes ?? 0}</span>
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Updated:{" "}
+                            <span className="text-gray-300">
+                              {new Date(p.updatedAt as any).toLocaleString()}
+                            </span>
+                          </div>
+                          {(p.startsAt || p.endsAt) && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              Window:{" "}
+                              <span className="text-gray-300">
+                                {p.startsAt ? new Date(p.startsAt as any).toLocaleString() : "Anytime"}{" "}
+                                → {p.endsAt ? new Date(p.endsAt as any).toLocaleString() : "No end"}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {!p.active && (
+                            <button
+                              onClick={() => activatePoll(p.id)}
+                              className="px-3 py-2 rounded-lg bg-green-500/15 text-green-200 border border-green-500/30 hover:bg-green-500/25 text-sm font-bold"
+                            >
+                              Activate
+                            </button>
+                          )}
+                          <button
+                            onClick={async () => {
+                              await openEditPoll(p);
+                              await loadPollResults(p.id);
+                            }}
+                            className="px-3 py-2 rounded-lg bg-gray-800 text-gray-200 hover:bg-gray-700 text-sm font-bold"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => loadPollResults(p.id)}
+                            className="px-3 py-2 rounded-lg bg-blue-500/15 text-blue-200 border border-blue-500/30 hover:bg-blue-500/25 text-sm font-bold"
+                          >
+                            Results
+                          </button>
+                          <button
+                            onClick={() => deletePoll(p.id)}
+                            className="px-3 py-2 rounded-lg bg-red-500/15 text-red-200 border border-red-500/30 hover:bg-red-500/25 text-sm font-bold"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+
+                    {/* Inline results drawer */}
+                    {pollResultsLoading && pollResultsForId === p.id && (
+                      <div className="mt-3 rounded-2xl border border-gray-800 bg-gray-900/40 p-4 text-sm text-gray-300">
+                        Loading results...
+                      </div>
+                    )}
+                    {!pollResultsLoading && pollResults?.id === p.id && (
+                      <div className="mt-3 rounded-2xl border border-gray-800 bg-gray-950 p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="text-white font-bold">Results</div>
+                          <div className="text-xs text-gray-500">
+                            Total votes:{" "}
+                            <span className="text-gray-200 font-bold">{pollResults.totalVotes ?? 0}</span>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          {(pollResults.options || []).map((o: any) => (
+                            <div key={o.id} className="rounded-xl border border-gray-800 bg-gray-900/40 p-3">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="text-gray-200 font-bold">{o.text}</div>
+                                <div className="text-xs text-gray-400">
+                                  {o.votes} votes • {o.percent}%
+                                </div>
+                              </div>
+                              <div className="mt-2 h-2 bg-gray-900 rounded-full overflow-hidden">
+                                <div className="h-full bg-afro-primary" style={{ width: `${o.percent}%` }} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -1197,6 +1547,164 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Poll Modal */}
+          {isPollModalOpen && user?.role === "ADMIN" && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+              <div className="w-full max-w-2xl bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+                <div className="p-5 border-b border-gray-800 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-white font-display font-bold text-xl">
+                      {editingPoll ? "Edit Poll" : "New Poll"}
+                    </h3>
+                    <p className="text-gray-500 text-sm mt-1">This powers the homepage Poll of the Week.</p>
+                  </div>
+                  <button
+                    onClick={() => setIsPollModalOpen(false)}
+                    className="text-gray-400 hover:text-white"
+                    aria-label="Close"
+                  >
+                    <X size={22} />
+                  </button>
+                </div>
+
+                <div className="p-5 space-y-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-300 mb-2">Question</label>
+                    <input
+                      value={pollDraft.question}
+                      onChange={(e) => setPollDraft((p) => ({ ...p, question: e.target.value }))}
+                      className="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-afro-primary"
+                      placeholder="Who should win Artist of the Year?"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-300 mb-2">Options</label>
+                    <div className="space-y-2">
+                      {pollDraft.options.map((o, idx) => (
+                        <div key={o.id} className="flex items-center gap-2">
+                          <input
+                            value={o.text}
+                            onChange={(e) =>
+                              setPollDraft((p) => ({
+                                ...p,
+                                options: p.options.map((x) => (x.id === o.id ? { ...x, text: e.target.value } : x)),
+                              }))
+                            }
+                            className="flex-1 bg-gray-950 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-afro-primary"
+                            placeholder={`Option ${idx + 1}`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPollDraft((p) => ({
+                                ...p,
+                                options: p.options.length <= 2 ? p.options : p.options.filter((x) => x.id !== o.id),
+                              }))
+                            }
+                            disabled={pollDraft.options.length <= 2}
+                            className="px-3 py-2.5 rounded-xl bg-gray-800 text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                            title="Remove option"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPollDraft((p) => ({
+                          ...p,
+                          options: [
+                            ...p.options,
+                            { id: `opt_${p.options.length + 1}`, text: "" },
+                          ],
+                        }))
+                      }
+                      className="mt-3 px-4 py-2 rounded-xl bg-gray-800 text-gray-200 hover:bg-gray-700 font-bold"
+                    >
+                      + Add option
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-300 mb-2">Starts at (optional)</label>
+                      <input
+                        type="datetime-local"
+                        value={pollDraft.startsAt}
+                        onChange={(e) => setPollDraft((p) => ({ ...p, startsAt: e.target.value }))}
+                        className="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-afro-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-300 mb-2">Ends at (optional)</label>
+                      <input
+                        type="datetime-local"
+                        value={pollDraft.endsAt}
+                        onChange={(e) => setPollDraft((p) => ({ ...p, endsAt: e.target.value }))}
+                        className="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-afro-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <label className="flex items-center gap-2 text-sm text-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={pollDraft.active}
+                      onChange={(e) => setPollDraft((p) => ({ ...p, active: e.target.checked }))}
+                    />
+                    Make this the active poll (deactivates others)
+                  </label>
+
+                  {pollResults?.id && pollResults.id === editingPoll?.id && (
+                    <div className="mt-4 rounded-2xl border border-gray-800 bg-gray-950 p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="text-white font-bold">Live Results</div>
+                        <div className="text-xs text-gray-500">
+                          Total votes: <span className="text-gray-200 font-bold">{pollResults.totalVotes ?? 0}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        {(pollResults.options || []).map((o: any) => (
+                          <div key={o.id} className="rounded-xl border border-gray-800 bg-gray-900/40 p-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="text-gray-200 font-bold">{o.text}</div>
+                              <div className="text-xs text-gray-400">
+                                {o.votes} votes • {o.percent}%
+                              </div>
+                            </div>
+                            <div className="mt-2 h-2 bg-gray-900 rounded-full overflow-hidden">
+                              <div className="h-full bg-afro-primary" style={{ width: `${o.percent}%` }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-5 border-t border-gray-800 flex items-center justify-end gap-3">
+                  <button
+                    onClick={() => setIsPollModalOpen(false)}
+                    className="px-4 py-2.5 rounded-xl bg-gray-800 text-gray-200 hover:bg-gray-700 font-bold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={savePoll}
+                    disabled={pollSaving}
+                    className="px-5 py-2.5 rounded-xl bg-afro-primary text-black font-bold hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    <Save size={18} />
+                    {pollSaving ? "Saving..." : "Save Poll"}
+                  </button>
                 </div>
               </div>
             </div>

@@ -2,6 +2,45 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { rateLimit } from '@/lib/rate-limit';
 
+function looksLikeSpam(input: { author: string; content: string }) {
+  const author = (input.author || '').trim();
+  const content = (input.content || '').trim();
+  const text = `${author} ${content}`.toLowerCase();
+
+  // Use a simple score so we don't block normal short comments like "Nice!".
+  // Hold for review when score >= 2.
+  let score = 0;
+
+  // Basic URL counting (strong signal)
+  const urlMatches = text.match(/https?:\/\/\S+|www\.\S+/g) || [];
+  if (urlMatches.length >= 2) score += 2;
+  else if (urlMatches.length === 1) score += 1;
+
+  // Obvious spam keywords (strong signal)
+  const keywords = [
+    'crypto',
+    'forex',
+    'bitcoin',
+    'investment',
+    'earn money',
+    'work from home',
+    'airdrop',
+    'giveaway',
+    'loan',
+    'casino',
+    'betting',
+  ];
+  if (keywords.some((k) => text.includes(k))) score += 2;
+
+  // Repeated characters (medium signal)
+  if (/(.)\1{9,}/.test(content)) score += 1;
+
+  // Extremely short content (weak signal)
+  if (content.length < 3) score += 1;
+
+  return score >= 2;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -65,20 +104,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await prisma.comment.create({
+    const pending = looksLikeSpam({ author, content });
+    const created = await prisma.comment.create({
       data: {
         postId,
         author,
         content,
         authorId: authorId || null,
-        status: 'PENDING',
+        status: pending ? 'PENDING' : 'APPROVED',
       },
     });
 
     return NextResponse.json(
       {
-        pending: true,
-        message: 'Thanks! Your comment was submitted and will appear after moderation.',
+        pending,
+        approved: !pending,
+        message: pending
+          ? 'Thanks! Your comment was received and is being reviewed.'
+          : 'Thanks! Your comment is now live.',
+        comment: pending ? null : created,
       },
       { status: 201 }
     );

@@ -22,12 +22,14 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({ postId, initialCommen
   const [newComment, setNewComment] = useState('');
   const [commentName, setCommentName] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
+  const [noticeType, setNoticeType] = useState<'success' | 'warning' | 'error'>('success');
   const [submitting, setSubmitting] = useState(false);
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || !commentName.trim()) return;
     setNotice(null);
+    setNoticeType('success');
     setSubmitting(true);
 
     try {
@@ -45,12 +47,22 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({ postId, initialCommen
 
       if (response.ok) {
         const result = await response.json();
-        setNotice(result.message || 'Thanks! Your comment will appear after moderation.');
+        setNotice(result.message || 'Thanks! Your comment was submitted.');
+        setNoticeType(result?.pending ? 'warning' : 'success');
+        if (!result?.pending && result?.comment) {
+          setComments((prev) => [result.comment, ...prev]);
+        }
         setNewComment('');
         // Keep name for convenience
+      } else {
+        const err = await response.json().catch(() => ({}));
+        setNotice(err.error || 'Failed to submit comment. Please try again.');
+        setNoticeType('error');
       }
     } catch (error) {
       console.error('Error submitting comment:', error);
+      setNotice('Failed to submit comment. Please try again.');
+      setNoticeType('error');
     } finally {
       setSubmitting(false);
     }
@@ -86,7 +98,15 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({ postId, initialCommen
       {/* Comment Form */}
       <form onSubmit={handleCommentSubmit} className="bg-gray-800 p-6 rounded-2xl border border-gray-700 mb-10">
         {notice && (
-          <div className="mb-4 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-green-200 text-sm font-medium">
+          <div
+            className={`mb-4 rounded-xl px-4 py-3 text-sm font-medium border ${
+              noticeType === 'success'
+                ? 'border-green-500/30 bg-green-500/10 text-green-200'
+                : noticeType === 'warning'
+                  ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-200'
+                  : 'border-red-500/30 bg-red-500/10 text-red-200'
+            }`}
+          >
             {notice}
           </div>
         )}

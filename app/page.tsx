@@ -1,10 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, PlayCircle, Clock, TrendingUp, BarChart3, Star, Hash, Calendar } from 'lucide-react';
+import { ArrowRight, PlayCircle, Clock, TrendingUp, Star, Hash, Calendar, BarChart3 } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import BlogPostCard from './components/BlogPostCard';
 import VideoCard from './components/VideoCard';
 import NewsletterForm from './components/NewsletterForm';
+import PollWidget from './components/PollWidget';
 
 async function getHomeData() {
   // Initialize with empty data
@@ -382,18 +383,7 @@ export default async function Home() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                 
                 {/* Poll of the Week */}
-                {currentPoll && (
-                  <div className="bg-gray-800/50 rounded-2xl p-8 border border-gray-700">
-                      <div className="flex items-center gap-3 mb-6">
-                          <div className="p-2 bg-afro-primary/20 text-afro-primary rounded-lg"><BarChart3 size={24} /></div>
-                          <h3 className="text-2xl font-bold font-display text-white">Poll of the Week</h3>
-                      </div>
-                      
-                      <h4 className="text-xl font-bold text-white mb-6">{currentPoll.question}</h4>
-                      
-                      <p className="text-gray-400 text-sm">Vote on the blog page</p>
-                  </div>
-                )}
+                <PollWidget initialPoll={null} />
 
                 {/* On This Day in History */}
                 <div className="bg-gray-950 rounded-2xl p-8 border border-gray-800 relative overflow-hidden flex flex-col justify-center">

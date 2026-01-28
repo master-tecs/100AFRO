@@ -77,6 +77,7 @@ model User {
   blogPostRevisions  BlogPostRevision[] @relation("BlogPostRevisionCreatedBy")
   comments      Comment[]
   moderatedComments  Comment[]          @relation("CommentModeratedBy")
+  pollVotes     PollVote[]
   accounts      Account[]
   sessions      Session[]
   
@@ -267,11 +268,33 @@ model Poll {
   question  String   @db.Text
   options   Json     // Array of { id, text, votes }
   active    Boolean  @default(true)
+  startsAt  DateTime?
+  endsAt    DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  votes     PollVote[]
   
   @@index([active])
   @@map("polls")
+}
+
+model PollVote {
+  id        String   @id @default(cuid())
+  pollId    String
+  optionId  String
+  userId    String?
+  guestId   String?
+  createdAt DateTime @default(now())
+
+  poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([pollId, userId])
+  @@unique([pollId, guestId])
+  @@index([pollId])
+  @@index([createdAt])
+  @@map("poll_votes")
 }
 
 model NewsletterSubscriber {
