@@ -19,6 +19,7 @@ import {
   Check,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { escapeHtml } from "@/lib/utils";
 import BlogPostCard from "../../components/BlogPostCard";
 import CommentsSection from "../../components/CommentsSection";
 import NewsletterForm from "../../components/NewsletterForm";
@@ -41,8 +42,13 @@ export async function generateMetadata({ params }: BlogDetailPageProps) {
     };
   }
 
-  const post = await prisma.blogPost.findUnique({
-    where: { slug },
+  const now = new Date();
+  const post = await prisma.blogPost.findFirst({
+    where: {
+      slug,
+      status: "PUBLISHED",
+      OR: [{ publishAt: null }, { publishAt: { lte: now } }],
+    },
     include: { author: { select: { name: true } } },
   });
 
@@ -75,11 +81,16 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
 
   // Handle missing DATABASE_URL or Prisma
   let post = null;
+  const now = new Date();
 
   try {
     if (process.env.DATABASE_URL && prisma !== null) {
-      post = await prisma.blogPost.findUnique({
-        where: { slug },
+      post = await prisma.blogPost.findFirst({
+        where: {
+          slug,
+          status: "PUBLISHED",
+          OR: [{ publishAt: null }, { publishAt: { lte: now } }],
+        },
         include: {
           author: {
             select: {
@@ -89,6 +100,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
             },
           },
           comments: {
+            where: { status: "APPROVED" },
             orderBy: {
               createdAt: "desc",
             },
@@ -116,6 +128,8 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
           where: {
             category: post.category,
             id: { not: post.id },
+            status: "PUBLISHED",
+            OR: [{ publishAt: null }, { publishAt: { lte: now } }],
           },
           include: {
             author: {
@@ -126,11 +140,14 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
           },
           take: 3,
           orderBy: {
-            createdAt: "desc",
+            publishedAt: "desc",
           },
         }),
         prisma.blogPost.findMany({
-          take: 4,
+          where: {
+            status: "PUBLISHED",
+            OR: [{ publishAt: null }, { publishAt: { lte: now } }],
+          },
           include: {
             author: {
               select: {
@@ -139,8 +156,9 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
             },
           },
           orderBy: {
-            createdAt: "desc",
+            publishedAt: "desc",
           },
+          take: 4,
         }),
       ]);
     }
@@ -232,7 +250,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
 
               <div
                 dangerouslySetInnerHTML={{
-                  __html: post.content.replace(/\n/g, "<br />"),
+                  __html: escapeHtml(post.content).replace(/\n/g, "<br />"),
                 }}
               />
             </div>

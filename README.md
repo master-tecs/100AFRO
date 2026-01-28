@@ -19,7 +19,7 @@ A full-stack Next.js application for African entertainment content, featuring bl
 - ✅ Full-text search using PostgreSQL
 - ✅ Blog posts with comments
 - ✅ Video gallery with YouTube integration
-- ✅ Music charts
+- ✅ Music charts (Spotify-powered live charts + DB fallback)
 - ✅ User authentication
 - ✅ Image upload with Cloudinary
 - ✅ SEO optimized with metadata and sitemap
@@ -58,6 +58,14 @@ NEXTAUTH_URL="http://localhost:3000"
 CLOUDINARY_CLOUD_NAME="your-cloud-name"
 CLOUDINARY_API_KEY="your-api-key"
 CLOUDINARY_API_SECRET="your-api-secret"
+
+# Spotify (Live charts)
+SPOTIFY_CLIENT_ID=""
+SPOTIFY_CLIENT_SECRET=""
+# Optional (recommended): set official playlist IDs for Top 50 per country
+SPOTIFY_TOP50_PLAYLIST_NG=""
+SPOTIFY_TOP50_PLAYLIST_GH=""
+SPOTIFY_TOP50_PLAYLIST_ZA=""
 
 # Email Service (Resend) - Required for newsletter functionality
 RESEND_API_KEY="re_your-resend-api-key"
@@ -169,6 +177,11 @@ Make sure to:
 - Run `npm run build` to test the build
 - Configure your database connection
 - Set up Cloudinary and OAuth providers
+
+## Spotify Charts Attribution
+
+The charts page uses Spotify APIs to display **metadata** (track/album titles, artists, artwork) and links back to Spotify.
+We do **not** host or redistribute audio. Ensure you follow Spotify branding/attribution requirements.
 
 ## Contributing
 

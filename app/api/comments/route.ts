@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { rateLimit } from '@/lib/rate-limit';
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
     }
 
     const comments = await prisma.comment.findMany({
-      where: { postId },
+      where: { postId, status: 'APPROVED' },
       orderBy: {
         createdAt: 'desc',
       },
@@ -39,6 +40,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const rl = rateLimit(request, { windowMs: 60_000, max: 5, keyPrefix: "comments:post" });
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: "Too many comments. Please wait a moment and try again." },
+        { status: 429, headers: { "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
+      );
+    }
+
     const body = await request.json();
     const { postId, author, content, authorId } = body;
 
@@ -56,16 +65,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const comment = await prisma.comment.create({
+    await prisma.comment.create({
       data: {
         postId,
         author,
         content,
         authorId: authorId || null,
+        status: 'PENDING',
       },
     });
 
-    return NextResponse.json(comment, { status: 201 });
+    return NextResponse.json(
+      {
+        pending: true,
+        message: 'Thanks! Your comment was submitted and will appear after moderation.',
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error('Error creating comment:', error);
     return NextResponse.json(

@@ -20,7 +20,11 @@ export default async function BlogListPage({ searchParams }: BlogListPageProps) 
   
   try {
     if (process.env.DATABASE_URL && prisma !== null) {
-      const where: any = {};
+      const now = new Date();
+      const where: any = {
+        status: 'PUBLISHED',
+        OR: [{ publishAt: null }, { publishAt: { lte: now } }],
+      };
       if (activeCategory && activeCategory !== 'All') {
         where.category = activeCategory;
       }
@@ -35,7 +39,7 @@ export default async function BlogListPage({ searchParams }: BlogListPageProps) 
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          publishedAt: 'desc',
         },
       });
     }

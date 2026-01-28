@@ -4,11 +4,20 @@ import { z } from 'zod';
 import { randomBytes } from 'crypto';
 import { resend, FROM_EMAIL, SITE_URL } from '@/lib/resend';
 import { getConfirmationEmailHtml, ConfirmationEmailText } from '@/lib/emails/confirmation-email';
+import { rateLimit } from '@/lib/rate-limit';
 
 const emailSchema = z.string().email('Invalid email address');
 
 export async function POST(request: NextRequest) {
   try {
+    const rl = rateLimit(request, { windowMs: 60_000, max: 3, keyPrefix: "newsletter:subscribe" });
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: "Too many requests. Please wait a moment and try again." },
+        { status: 429, headers: { "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
+      );
+    }
+
     const body = await request.json();
     const email = body.email;
 

@@ -14,8 +14,13 @@ export async function GET(
     }
 
     const { slug } = await params;
-    const post = await prisma.blogPost.findUnique({
-      where: { slug },
+    const now = new Date();
+    const post = await prisma.blogPost.findFirst({
+      where: {
+        slug,
+        status: "PUBLISHED",
+        OR: [{ publishAt: null }, { publishAt: { lte: now } }],
+      },
       include: {
         author: {
           select: {
@@ -25,6 +30,7 @@ export async function GET(
           },
         },
         comments: {
+          where: { status: "APPROVED" },
           orderBy: {
             createdAt: "desc",
           },

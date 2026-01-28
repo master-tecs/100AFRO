@@ -21,32 +21,38 @@ async function getHomeData() {
   try {
     if (process.env.DATABASE_URL && prisma !== null) {
       const prismaClient = prisma; // Type guard
+      const now = new Date();
+      const publishedWhere = {
+        status: "PUBLISHED" as const,
+        OR: [{ publishAt: null }, { publishAt: { lte: now } }],
+      };
       const [fetchedFeaturedPost, fetchedSubFeaturedPosts, fetchedIndustryPosts, fetchedLatestVideos, fetchedTrendingPosts, fetchedFeaturedArtists, fetchedTrendingTopics, fetchedCurrentPoll] = await Promise.all([
         prismaClient.blogPost.findFirst({
-          where: { featured: true },
+          where: { ...publishedWhere, featured: true },
           include: { author: { select: { name: true } } },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { publishedAt: 'desc' },
         }),
         prismaClient.blogPost.findMany({
-          where: { featured: false },
+          where: { ...publishedWhere, featured: false },
           include: { author: { select: { name: true } } },
           take: 2,
-          orderBy: { createdAt: 'desc' },
+          orderBy: { publishedAt: 'desc' },
         }),
         prismaClient.blogPost.findMany({
-          where: { category: 'Industry' },
+          where: { ...publishedWhere, category: 'Industry' },
           include: { author: { select: { name: true } } },
           take: 3,
-          orderBy: { createdAt: 'desc' },
+          orderBy: { publishedAt: 'desc' },
         }),
         prismaClient.video.findMany({
           take: 4,
           orderBy: { createdAt: 'desc' },
         }),
         prismaClient.blogPost.findMany({
+          where: publishedWhere,
           take: 4,
           include: { author: { select: { name: true } } },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { publishedAt: 'desc' },
         }),
         prismaClient.artist.findMany({
           take: 6,

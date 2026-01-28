@@ -23,10 +23,13 @@ import {
   TrendingUp,
   Eye,
   MessageSquare,
+  Clock,
   Calendar,
   Save,
 } from "lucide-react";
-import { BlogCategory } from "@prisma/client";
+
+type BlogCategory = "Music" | "Culture" | "Lifestyle" | "News" | "Industry";
+type PostStatus = "DRAFT" | "IN_REVIEW" | "PUBLISHED" | "ARCHIVED";
 
 interface BlogPost {
   id: string;
@@ -37,6 +40,10 @@ interface BlogPost {
   category: BlogCategory;
   featured: boolean;
   imageUrl: string;
+  status?: PostStatus | string;
+  publishAt?: string | Date | null;
+  publishedAt?: string | Date | null;
+  tags?: string[];
   author: {
     name: string | null;
   };
@@ -46,7 +53,9 @@ interface BlogPost {
 export default function AdminDashboard() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"posts" | "stats" | "videos">(
+  const [activeTab, setActiveTab] = useState<
+    "posts" | "comments" | "stats" | "videos"
+  >(
     "posts"
   );
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -56,6 +65,23 @@ export default function AdminDashboard() {
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "ALL" | "DRAFT" | "IN_REVIEW" | "PUBLISHED" | "ARCHIVED"
+  >("ALL");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [isRevisionsOpen, setIsRevisionsOpen] = useState(false);
+  const [revisionsLoading, setRevisionsLoading] = useState(false);
+  const [revisions, setRevisions] = useState<any[]>([]);
+  const [revisionsPost, setRevisionsPost] = useState<BlogPost | null>(null);
+  const [commentsTabStatus, setCommentsTabStatus] = useState<
+    "PENDING" | "APPROVED" | "REJECTED" | "SPAM"
+  >("PENDING");
+  const [commentsPage, setCommentsPage] = useState(1);
+  const [commentsTotalPages, setCommentsTotalPages] = useState(1);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [moderationQueue, setModerationQueue] = useState<any[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -68,6 +94,13 @@ export default function AdminDashboard() {
     content: "",
     imageUrl: "https://picsum.photos/seed/new/800/600",
     featured: false,
+    status: "DRAFT" as PostStatus,
+    publishAt: "",
+    tags: "",
+    metaTitle: "",
+    metaDescription: "",
+    canonicalUrl: "",
+    ogImageUrl: "",
   });
 
   useEffect(() => {
@@ -79,23 +112,177 @@ export default function AdminDashboard() {
   }, [loading, user, router]);
 
   useEffect(() => {
-    if (user && user.role === "ADMIN") {
+    if (user && (user.role === "ADMIN" || user.role === "AUTHOR")) {
       fetchPosts();
     }
-  }, [user]);
+  }, [user, page, statusFilter]);
+
+  useEffect(() => {
+    if (!user || user.role !== "ADMIN") return;
+    if (activeTab !== "comments") return;
+    fetchComments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, commentsTabStatus, commentsPage, user]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 4500);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const showToast = (type: "success" | "error", message: string) => {
+    setToast({ type, message });
+  };
+
+  const openRevisions = async (post: BlogPost) => {
+    setIsRevisionsOpen(true);
+    setRevisionsPost(post);
+    setRevisionsLoading(true);
+    try {
+      const res = await fetch(`/api/admin/blog/${post.id}/revisions`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast("error", err.error || "Failed to load revisions");
+        setRevisions([]);
+        return;
+      }
+      const data = await res.json();
+      setRevisions(data.revisions || []);
+    } catch (e) {
+      showToast("error", "Failed to load revisions");
+      setRevisions([]);
+    } finally {
+      setRevisionsLoading(false);
+    }
+  };
+
+  const restoreRevision = async (revisionId: string) => {
+    if (!revisionsPost) return;
+    if (!window.confirm("Restore this revision? Current content will be saved as a new revision.")) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/blog/${revisionsPost.id}/revisions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ revisionId }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast("error", err.error || "Failed to restore revision");
+        return;
+      }
+      const updated = await res.json();
+      setPosts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+      showToast("success", "Revision restored.");
+      await openRevisions(updated);
+    } catch (e) {
+      showToast("error", "Failed to restore revision");
+    }
+  };
+
+  const fetchComments = async () => {
+    setCommentsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("status", commentsTabStatus);
+      params.set("page", String(commentsPage));
+      params.set("limit", "25");
+      const res = await fetch(`/api/admin/comments?${params.toString()}`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast("error", err.error || "Failed to load comments");
+        setModerationQueue([]);
+        return;
+      }
+      const data = await res.json();
+      setModerationQueue(data.comments || []);
+      setCommentsTotalPages(data.pagination?.totalPages || 1);
+    } catch (e) {
+      showToast("error", "Failed to load comments");
+      setModerationQueue([]);
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  const moderateComment = async (id: string, status: "APPROVED" | "REJECTED" | "SPAM") => {
+    try {
+      const res = await fetch(`/api/admin/comments/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast("error", err.error || "Failed to update comment");
+        return;
+      }
+      const updated = await res.json();
+      // Remove from current queue if status changed away from filter
+      setModerationQueue((prev) => prev.filter((c) => c.id !== updated.id));
+      showToast("success", `Comment marked as ${status}.`);
+    } catch (e) {
+      showToast("error", "Failed to update comment");
+    }
+  };
 
   const fetchPosts = async () => {
+    setPostsLoading(true);
     try {
-      const response = await fetch("/api/admin/blog");
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      params.set("limit", "20");
+      if (searchQuery.trim()) params.set("q", searchQuery.trim());
+      if (statusFilter !== "ALL") params.set("status", statusFilter);
+
+      const response = await fetch(`/api/admin/blog?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
         setPosts(data.posts || []);
+        setTotalPages(data.pagination?.totalPages || 1);
       }
     } catch (error) {
       console.error("Error fetching posts:", error);
     } finally {
       setPostsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    const t = setTimeout(() => {
+      setPage(1);
+      fetchPosts();
+    }, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
+
+  const normalizePostPayload = () => {
+    const tags = (newPost.tags || "")
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    const publishAt = newPost.publishAt
+      ? new Date(newPost.publishAt).toISOString()
+      : null;
+    const payload: any = {
+      title: newPost.title,
+      excerpt: newPost.excerpt,
+      content: newPost.content,
+      category: newPost.category,
+      featured: newPost.featured,
+      imageUrl: newPost.imageUrl,
+      status: newPost.status,
+      publishAt,
+      tags,
+      metaTitle: newPost.metaTitle || null,
+      metaDescription: newPost.metaDescription || null,
+      canonicalUrl: newPost.canonicalUrl || null,
+      ogImageUrl: newPost.ogImageUrl || null,
+    };
+    return payload;
   };
 
   const handleCreatePost = async (e: React.FormEvent) => {
@@ -111,15 +298,17 @@ export default function AdminDashboard() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(newPost),
+        body: JSON.stringify(normalizePostPayload()),
       });
 
       if (response.ok) {
         const post = await response.json();
         if (isEditMode) {
           setPosts(posts.map((p) => (p.id === editingPost!.id ? post : p)));
+          showToast("success", "Post updated successfully.");
         } else {
           setPosts([post, ...posts]);
+          showToast("success", "Draft saved. You can schedule or publish when ready.");
         }
         setIsModalOpen(false);
         setIsEditMode(false);
@@ -131,10 +320,18 @@ export default function AdminDashboard() {
           content: "",
           imageUrl: "https://picsum.photos/seed/new/800/600",
           featured: false,
+          status: "DRAFT",
+          publishAt: "",
+          tags: "",
+          metaTitle: "",
+          metaDescription: "",
+          canonicalUrl: "",
+          ogImageUrl: "",
         });
       } else {
         const error = await response.json();
-        alert(
+        showToast(
+          "error",
           error.error || `Failed to ${isEditMode ? "update" : "create"} post`
         );
       }
@@ -143,7 +340,7 @@ export default function AdminDashboard() {
         `Error ${isEditMode ? "updating" : "creating"} post:`,
         error
       );
-      alert(`Failed to ${isEditMode ? "update" : "create"} post`);
+      showToast("error", `Failed to ${isEditMode ? "update" : "create"} post`);
     }
   };
 
@@ -157,13 +354,20 @@ export default function AdminDashboard() {
       content: post.content || post.excerpt,
       imageUrl: post.imageUrl,
       featured: post.featured,
+      status: (post.status as PostStatus) || "DRAFT",
+      publishAt: post.publishAt ? new Date(post.publishAt as any).toISOString().slice(0, 16) : "",
+      tags: (post.tags || []).join(", "),
+      metaTitle: (post as any).metaTitle || "",
+      metaDescription: (post as any).metaDescription || "",
+      canonicalUrl: (post as any).canonicalUrl || "",
+      ogImageUrl: (post as any).ogImageUrl || "",
     });
     setIsEditMode(true);
     setIsModalOpen(true);
   };
 
   const deletePost = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this post?")) {
+    if (!window.confirm("Archive this post? You can restore later from revisions.")) {
       return;
     }
 
@@ -174,12 +378,13 @@ export default function AdminDashboard() {
 
       if (response.ok) {
         setPosts(posts.filter((p) => p.id !== id));
+        showToast("success", "Post archived.");
       } else {
-        alert("Failed to delete post");
+        showToast("error", "Failed to archive post");
       }
     } catch (error) {
       console.error("Error deleting post:", error);
-      alert("Failed to delete post");
+      showToast("error", "Failed to archive post");
     }
   };
 
@@ -201,11 +406,11 @@ export default function AdminDashboard() {
         setImagePreview(data.url);
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to upload image");
+        showToast("error", error.error || "Failed to upload image");
       }
     } catch (error) {
       console.error("Error uploading image:", error);
-      alert("Failed to upload image");
+      showToast("error", "Failed to upload image");
     } finally {
       setUploadingImage(false);
     }
@@ -224,12 +429,6 @@ export default function AdminDashboard() {
       year: "numeric",
     }).format(d);
   };
-
-  const filteredPosts = posts.filter(
-    (p) =>
-      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   if (loading || postsLoading) {
     return (
@@ -250,12 +449,26 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!user || user.role !== "ADMIN") {
+  if (!user || (user.role !== "ADMIN" && user.role !== "AUTHOR")) {
     return null;
   }
 
   return (
     <div className="min-h-screen bg-gray-950 flex h-screen overflow-hidden font-sans">
+      {/* Toast */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-[100]">
+          <div
+            className={`px-5 py-4 rounded-xl shadow-2xl border backdrop-blur-sm ${
+              toast.type === "success"
+                ? "bg-green-500/10 border-green-500/30 text-green-200"
+                : "bg-red-500/10 border-red-500/30 text-red-200"
+            }`}
+          >
+            <div className="text-sm font-bold">{toast.message}</div>
+          </div>
+        </div>
+      )}
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div
@@ -338,6 +551,21 @@ export default function AdminDashboard() {
           <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-gray-400 hover:bg-gray-800 hover:text-white transition-all">
             <Users size={20} /> Community
           </button>
+          {user?.role === "ADMIN" && (
+            <button
+              onClick={() => {
+                setActiveTab("comments");
+                setIsSidebarOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${
+                activeTab === "comments"
+                  ? "bg-afro-primary text-black"
+                  : "text-gray-400 hover:bg-gray-800 hover:text-white"
+              }`}
+            >
+              <MessageSquare size={20} /> Moderation
+            </button>
+          )}
           <div className="h-px bg-gray-800 my-4 mx-2"></div>
           <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-gray-400 hover:bg-gray-800 hover:text-white transition-all">
             <Settings size={20} /> Settings
@@ -459,6 +687,21 @@ export default function AdminDashboard() {
                       className="w-full bg-gray-900 border border-gray-800 rounded-xl py-2 pl-10 pr-4 text-white text-sm focus:outline-none focus:border-afro-primary"
                     />
                   </div>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value as any);
+                      setPage(1);
+                    }}
+                    className="bg-gray-900 border border-gray-800 rounded-xl py-2 px-3 text-white text-sm focus:outline-none focus:border-afro-primary"
+                    title="Filter by status"
+                  >
+                    <option value="ALL">All</option>
+                    <option value="DRAFT">Drafts</option>
+                    <option value="IN_REVIEW">In review</option>
+                    <option value="PUBLISHED">Published</option>
+                    <option value="ARCHIVED">Archived</option>
+                  </select>
                   <button
                     onClick={() => {
                       setIsEditMode(false);
@@ -471,6 +714,13 @@ export default function AdminDashboard() {
                         content: "",
                         imageUrl: "https://picsum.photos/seed/new/800/600",
                         featured: false,
+                        status: "DRAFT",
+                        publishAt: "",
+                        tags: "",
+                        metaTitle: "",
+                        metaDescription: "",
+                        canonicalUrl: "",
+                        ogImageUrl: "",
                       });
                       setIsModalOpen(true);
                     }}
@@ -496,6 +746,9 @@ export default function AdminDashboard() {
                           Category
                         </th>
                         <th className="px-6 py-4 text-xs font-bold uppercase text-gray-500 tracking-widest">
+                          Status
+                        </th>
+                        <th className="px-6 py-4 text-xs font-bold uppercase text-gray-500 tracking-widest">
                           Author
                         </th>
                         <th className="px-6 py-4 text-xs font-bold uppercase text-gray-500 tracking-widest">
@@ -507,7 +760,7 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-800">
-                      {filteredPosts.map((post) => (
+                      {posts.map((post) => (
                         <tr
                           key={post.id}
                           className="hover:bg-gray-800/30 transition-colors group"
@@ -536,6 +789,16 @@ export default function AdminDashboard() {
                               {post.category}
                             </span>
                           </td>
+                          <td className="px-6 py-4">
+                            <span className="text-xs font-bold text-gray-300 bg-gray-800 px-2 py-1 rounded uppercase tracking-wider">
+                              {(post.status as any) || "DRAFT"}
+                            </span>
+                            {(post.status as any) === "PUBLISHED" && post.publishAt && new Date(post.publishAt as any) > new Date() && (
+                              <span className="ml-2 text-xs font-bold text-purple-300 bg-purple-500/10 px-2 py-1 rounded uppercase tracking-wider">
+                                Scheduled
+                              </span>
+                            )}
+                          </td>
                           <td className="px-6 py-4 text-sm text-gray-300 font-medium">
                             {post.author.name || "Admin"}
                           </td>
@@ -544,6 +807,13 @@ export default function AdminDashboard() {
                           </td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => openRevisions(post)}
+                                className="p-2 text-gray-500 hover:text-afro-primary transition-colors"
+                                title="Revisions"
+                              >
+                                <Clock size={18} />
+                              </button>
                               <button
                                 onClick={() => handleEdit(post)}
                                 className="p-2 text-gray-500 hover:text-white transition-colors"
@@ -574,18 +844,41 @@ export default function AdminDashboard() {
                   </table>
                 </div>
 
-                {filteredPosts.length === 0 && !loading && (
+                {posts.length === 0 && !loading && (
                   <div className="py-20 text-center">
                     <p className="text-gray-500 font-medium">
-                      No matches found for your search.
+                      No posts found for the selected filters.
                     </p>
                   </div>
                 )}
+
+                <div className="flex items-center justify-between px-6 py-4 border-t border-gray-800 text-sm">
+                  <div className="text-gray-500">
+                    Page <span className="text-gray-200 font-bold">{page}</span> of{" "}
+                    <span className="text-gray-200 font-bold">{totalPages}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={page <= 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      className="px-3 py-1.5 rounded-lg bg-gray-800 text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-700"
+                    >
+                      Prev
+                    </button>
+                    <button
+                      disabled={page >= totalPages}
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      className="px-3 py-1.5 rounded-lg bg-gray-800 text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-700"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Mobile Card View */}
               <div className="lg:hidden space-y-4">
-                {filteredPosts.map((post) => (
+                {posts.map((post) => (
                   <div
                     key={post.id}
                     className="bg-gray-900 border border-gray-800 rounded-xl p-4"
@@ -609,6 +902,9 @@ export default function AdminDashboard() {
                           <span className="text-xs font-bold text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded uppercase">
                             {post.category}
                           </span>
+                          <span className="text-xs font-bold text-gray-300 bg-gray-800 px-2 py-0.5 rounded uppercase">
+                            {(post.status as any) || "DRAFT"}
+                          </span>
                           {post.featured && (
                             <span className="text-xs font-bold text-afro-primary bg-afro-primary/10 px-2 py-0.5 rounded">
                               Featured
@@ -625,6 +921,13 @@ export default function AdminDashboard() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => openRevisions(post)}
+                          className="p-2 text-gray-500 hover:text-afro-primary bg-gray-800 rounded-lg transition-colors"
+                          title="Revisions"
+                        >
+                          <Clock size={16} />
+                        </button>
                         <button
                           onClick={() => handleEdit(post)}
                           className="p-2 text-gray-500 hover:text-white bg-gray-800 rounded-lg transition-colors"
@@ -652,15 +955,164 @@ export default function AdminDashboard() {
                   </div>
                 ))}
 
-                {filteredPosts.length === 0 && !loading && (
+                {posts.length === 0 && !loading && (
                   <div className="py-12 text-center bg-gray-900 border border-gray-800 rounded-xl">
                     <p className="text-gray-500 font-medium">
-                      No matches found for your search.
+                      No posts found for the selected filters.
                     </p>
                   </div>
                 )}
+
+                <div className="flex items-center justify-between px-2 py-2 text-sm">
+                  <div className="text-gray-500">
+                    Page <span className="text-gray-200 font-bold">{page}</span> of{" "}
+                    <span className="text-gray-200 font-bold">{totalPages}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={page <= 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      className="px-3 py-1.5 rounded-lg bg-gray-800 text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Prev
+                    </button>
+                    <button
+                      disabled={page >= totalPages}
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      className="px-3 py-1.5 rounded-lg bg-gray-800 text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
               </div>
             </>
+          )}
+
+          {/* Comments Moderation Tab (Admin) */}
+          {activeTab === "comments" && user.role === "ADMIN" && (
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 lg:p-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-xl lg:text-2xl font-display font-bold text-white">
+                    Comment Moderation
+                  </h2>
+                  <p className="text-gray-500 text-sm mt-1">
+                    Approve, reject, or mark spam before comments go live.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <select
+                    value={commentsTabStatus}
+                    onChange={(e) => {
+                      setCommentsTabStatus(e.target.value as any);
+                      setCommentsPage(1);
+                    }}
+                    className="bg-gray-950 border border-gray-700 rounded-xl py-2 px-3 text-white text-sm focus:outline-none focus:border-afro-primary"
+                  >
+                    <option value="PENDING">Pending</option>
+                    <option value="APPROVED">Approved</option>
+                    <option value="REJECTED">Rejected</option>
+                    <option value="SPAM">Spam</option>
+                  </select>
+                </div>
+              </div>
+
+              {commentsLoading ? (
+                <div className="py-10 text-center text-gray-400">Loading comments...</div>
+              ) : moderationQueue.length === 0 ? (
+                <div className="py-10 text-center text-gray-500">
+                  No comments in this queue.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {moderationQueue.map((c) => (
+                    <div
+                      key={c.id}
+                      className="bg-gray-950 border border-gray-800 rounded-xl p-4"
+                    >
+                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <span className="text-white font-bold">{c.author}</span>
+                            <span className="text-xs text-gray-500">
+                              {new Date(c.createdAt).toLocaleString()}
+                            </span>
+                            {c.post?.slug && (
+                              <Link
+                                href={`/blog/${c.post.slug}`}
+                                target="_blank"
+                                className="text-xs font-bold text-afro-primary hover:underline"
+                              >
+                                View post
+                              </Link>
+                            )}
+                          </div>
+                          {c.post?.title && (
+                            <div className="text-xs text-gray-500 mb-2">
+                              On: <span className="text-gray-300">{c.post.title}</span>
+                            </div>
+                          )}
+                          <div className="text-gray-300 text-sm leading-relaxed">
+                            {c.content}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {commentsTabStatus !== "APPROVED" && (
+                            <button
+                              onClick={() => moderateComment(c.id, "APPROVED")}
+                              className="px-3 py-2 rounded-lg bg-green-500/15 text-green-200 border border-green-500/30 hover:bg-green-500/25 text-sm font-bold"
+                            >
+                              Approve
+                            </button>
+                          )}
+                          {commentsTabStatus !== "REJECTED" && (
+                            <button
+                              onClick={() => moderateComment(c.id, "REJECTED")}
+                              className="px-3 py-2 rounded-lg bg-yellow-500/15 text-yellow-200 border border-yellow-500/30 hover:bg-yellow-500/25 text-sm font-bold"
+                            >
+                              Reject
+                            </button>
+                          )}
+                          {commentsTabStatus !== "SPAM" && (
+                            <button
+                              onClick={() => moderateComment(c.id, "SPAM")}
+                              className="px-3 py-2 rounded-lg bg-red-500/15 text-red-200 border border-red-500/30 hover:bg-red-500/25 text-sm font-bold"
+                            >
+                              Spam
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between mt-6 text-sm">
+                <div className="text-gray-500">
+                  Page <span className="text-gray-200 font-bold">{commentsPage}</span> of{" "}
+                  <span className="text-gray-200 font-bold">{commentsTotalPages}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    disabled={commentsPage <= 1}
+                    onClick={() => setCommentsPage((p) => Math.max(1, p - 1))}
+                    className="px-3 py-1.5 rounded-lg bg-gray-800 text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Prev
+                  </button>
+                  <button
+                    disabled={commentsPage >= commentsTotalPages}
+                    onClick={() => setCommentsPage((p) => Math.min(commentsTotalPages, p + 1))}
+                    className="px-3 py-1.5 rounded-lg bg-gray-800 text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Stats Tab */}
@@ -844,10 +1296,76 @@ export default function AdminDashboard() {
                         onChange={(e) =>
                           setNewPost({ ...newPost, featured: e.target.checked })
                         }
+                        disabled={user.role !== "ADMIN"}
                         className="w-4 h-4 rounded border-gray-700 bg-gray-950 text-afro-primary focus:ring-afro-primary"
                       />
                       Featured Post
                     </label>
+                    {user.role !== "ADMIN" && (
+                      <span className="ml-3 text-xs text-gray-500">
+                        (Admins only)
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-widest">
+                      Status
+                    </label>
+                    <select
+                      value={newPost.status}
+                      onChange={(e) =>
+                        setNewPost({
+                          ...newPost,
+                          status: e.target.value as any,
+                        })
+                      }
+                      disabled={user.role !== "ADMIN" && user.role !== "AUTHOR"}
+                      className="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-afro-primary text-sm lg:text-base"
+                    >
+                      <option value="DRAFT">Draft</option>
+                      <option value="IN_REVIEW">In review</option>
+                      {user.role === "ADMIN" && (
+                        <>
+                          <option value="PUBLISHED">Published</option>
+                          <option value="ARCHIVED">Archived</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+
+                  {user.role === "ADMIN" && (
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-widest">
+                        Schedule Publish (optional)
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={newPost.publishAt}
+                        onChange={(e) =>
+                          setNewPost({ ...newPost, publishAt: e.target.value })
+                        }
+                        className="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-afro-primary text-sm lg:text-base"
+                      />
+                      <p className="text-xs text-gray-500 mt-2">
+                        If status is <span className="text-gray-200 font-bold">Published</span> and this is set in the future, the post will be scheduled.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-widest">
+                      Tags (comma separated)
+                    </label>
+                    <input
+                      type="text"
+                      value={newPost.tags}
+                      onChange={(e) =>
+                        setNewPost({ ...newPost, tags: e.target.value })
+                      }
+                      className="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-afro-primary text-sm lg:text-base"
+                      placeholder="afrobeats, music, culture"
+                    />
                   </div>
 
                   <div className="md:col-span-2">
@@ -874,7 +1392,7 @@ export default function AdminDashboard() {
                           const file = e.dataTransfer.files[0];
                           if (file && file.type.startsWith("image/")) {
                             if (file.size > 10 * 1024 * 1024) {
-                              alert("File size must be less than 10MB");
+                              showToast("error", "File size must be less than 10MB");
                               return;
                             }
                             handleImageUpload(file);
@@ -915,7 +1433,7 @@ export default function AdminDashboard() {
                             const file = e.target.files?.[0];
                             if (file) {
                               if (file.size > 10 * 1024 * 1024) {
-                                alert("File size must be less than 10MB");
+                                showToast("error", "File size must be less than 10MB");
                                 return;
                               }
                               handleImageUpload(file);
@@ -990,6 +1508,77 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
+                {/* SEO (optional) */}
+                <div className="mt-2 bg-gray-950 border border-gray-800 rounded-2xl p-4 lg:p-6">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-4">
+                    SEO (optional)
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-widest">
+                        Meta Title
+                      </label>
+                      <input
+                        type="text"
+                        value={newPost.metaTitle}
+                        onChange={(e) =>
+                          setNewPost({ ...newPost, metaTitle: e.target.value })
+                        }
+                        className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-afro-primary text-sm"
+                        placeholder="Optional SEO title (defaults to headline)"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-widest">
+                        Meta Description
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={newPost.metaDescription}
+                        onChange={(e) =>
+                          setNewPost({
+                            ...newPost,
+                            metaDescription: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-afro-primary resize-none text-sm"
+                        placeholder="Optional SEO description (defaults to excerpt)"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-widest">
+                        Canonical URL
+                      </label>
+                      <input
+                        type="url"
+                        value={newPost.canonicalUrl}
+                        onChange={(e) =>
+                          setNewPost({
+                            ...newPost,
+                            canonicalUrl: e.target.value,
+                          })
+                        }
+                        className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-afro-primary text-sm"
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-widest">
+                        OG Image URL
+                      </label>
+                      <input
+                        type="url"
+                        value={newPost.ogImageUrl}
+                        onChange={(e) =>
+                          setNewPost({ ...newPost, ogImageUrl: e.target.value })
+                        }
+                        className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-afro-primary text-sm"
+                        placeholder="https://..."
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-800">
                   <button
                     type="button"
@@ -1013,12 +1602,88 @@ export default function AdminDashboard() {
                       </>
                     ) : (
                       <>
-                        <Plus size={18} /> Publish Story
+                        <Plus size={18} /> Save Story
                       </>
                     )}
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Revisions Modal */}
+      {isRevisionsOpen && revisionsPost && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl relative my-4">
+            <div className="sticky top-0 bg-gray-900 border-b border-gray-800 p-4 lg:p-6 z-10">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-xl lg:text-2xl font-display font-bold text-white">
+                    Revisions
+                  </h2>
+                  <p className="text-gray-500 text-sm mt-1">
+                    {revisionsPost.title}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsRevisionsOpen(false);
+                    setRevisionsPost(null);
+                    setRevisions([]);
+                  }}
+                  className="text-gray-500 hover:text-white transition-colors p-2 -mr-2"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-4 lg:p-6">
+              {revisionsLoading ? (
+                <div className="py-10 text-center text-gray-400">
+                  Loading revisions...
+                </div>
+              ) : revisions.length === 0 ? (
+                <div className="py-10 text-center text-gray-500">
+                  No revisions yet. Updates will start creating revisions automatically.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {revisions.map((rev) => (
+                    <div
+                      key={rev.id}
+                      className="bg-gray-950 border border-gray-800 rounded-xl p-4 flex items-start justify-between gap-4"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-white font-bold truncate">
+                          {rev.title}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {new Date(rev.createdAt).toLocaleString()}
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <span className="text-xs font-bold text-gray-300 bg-gray-800 px-2 py-1 rounded uppercase tracking-wider">
+                            {rev.status}
+                          </span>
+                          <span className="text-xs font-bold text-blue-400 bg-blue-400/10 px-2 py-1 rounded uppercase tracking-wider">
+                            {rev.category}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => restoreRevision(rev.id)}
+                          className="px-3 py-2 rounded-lg bg-afro-primary text-black font-bold hover:bg-white transition-colors text-sm"
+                        >
+                          Restore
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -16,6 +16,20 @@ enum UserRole {
   ADMIN
 }
 
+enum PostStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CommentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SPAM
+}
+
 enum BlogCategory {
   Music
   Culture
@@ -58,7 +72,11 @@ model User {
   
   // Relations
   blogPosts     BlogPost[]
+  createdBlogPosts   BlogPost[]         @relation("BlogPostCreatedBy")
+  updatedBlogPosts   BlogPost[]         @relation("BlogPostUpdatedBy")
+  blogPostRevisions  BlogPostRevision[] @relation("BlogPostRevisionCreatedBy")
   comments      Comment[]
+  moderatedComments  Comment[]          @relation("CommentModeratedBy")
   accounts      Account[]
   sessions      Session[]
   
@@ -75,6 +93,16 @@ model BlogPost {
   category    BlogCategory
   featured    Boolean      @default(false)
   imageUrl    String
+  status      PostStatus   @default(DRAFT)
+  publishAt   DateTime?
+  publishedAt DateTime?
+  tags        String[]     @default([])
+  metaTitle        String?
+  metaDescription  String?
+  canonicalUrl     String?
+  ogImageUrl       String?
+  createdById String
+  updatedById String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   
@@ -83,13 +111,49 @@ model BlogPost {
   
   // Relations
   author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdBy   User         @relation("BlogPostCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy   User?        @relation("BlogPostUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
   comments    Comment[]
+  revisions   BlogPostRevision[]
   
   @@index([slug])
   @@index([category])
   @@index([featured])
   @@index([createdAt])
+  @@index([authorId])
+  @@index([status, publishAt])
+  @@index([publishedAt])
+  @@index([tags], type: Gin)
   @@map("blog_posts")
+}
+
+model BlogPostRevision {
+  id          String       @id @default(cuid())
+  postId      String
+  title       String
+  slug        String
+  excerpt     String       @db.Text
+  content     String       @db.Text
+  category    BlogCategory
+  featured    Boolean
+  imageUrl    String
+  status      PostStatus
+  publishAt   DateTime?
+  publishedAt DateTime?
+  tags        String[]     @default([])
+  metaTitle        String?
+  metaDescription  String?
+  canonicalUrl     String?
+  ogImageUrl       String?
+  createdAt   DateTime     @default(now())
+  createdById String
+
+  post        BlogPost     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdBy   User         @relation("BlogPostRevisionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([postId])
+  @@index([createdAt])
+  @@map("blog_post_revisions")
 }
 
 model Comment {
@@ -99,15 +163,21 @@ model Comment {
   author    String   // Guest author name
   content   String   @db.Text
   likes     Int      @default(0)
+  status    CommentStatus @default(PENDING)
+  moderatedAt DateTime?
+  moderatedById String?
+  moderationReason String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
   // Relations
   post      BlogPost? @relation(fields: [postId], references: [id], onDelete: Cascade)
   user      User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  moderatedBy User?   @relation("CommentModeratedBy", fields: [moderatedById], references: [id], onDelete: SetNull)
   
   @@index([postId])
   @@index([createdAt])
+  @@index([status])
 }
 
 model Video {
