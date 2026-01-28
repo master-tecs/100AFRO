@@ -67,6 +67,13 @@ SPOTIFY_TOP50_PLAYLIST_NG=""
 SPOTIFY_TOP50_PLAYLIST_GH=""
 SPOTIFY_TOP50_PLAYLIST_ZA=""
 
+# Daily Fact (On This Day in History)
+# Used by /api/admin/daily-fact/refresh for cron automation
+DAILY_FACT_REFRESH_SECRET=""
+# Optional but recommended user agents (some public APIs expect this)
+WIKIDATA_USER_AGENT="100AFRO/1.0 (admin@100afro.com)"
+MUSICBRAINZ_USER_AGENT="100AFRO/1.0 (admin@100afro.com)"
+
 # Email Service (Resend) - Required for newsletter functionality
 RESEND_API_KEY="re_your-resend-api-key"
 RESEND_FROM_EMAIL="100AFRO <newsletter@100afro.com>" # Optional, defaults to newsletter@100afro.com
@@ -182,6 +189,19 @@ Make sure to:
 
 The charts page uses Spotify APIs to display **metadata** (track/album titles, artists, artwork) and links back to Spotify.
 We do **not** host or redistribute audio. Ensure you follow Spotify branding/attribution requirements.
+
+## Daily Fact (On This Day in History) Automation
+
+The homepage “On This Day in History” block is backed by the `OnThisDayFact` table and can be refreshed daily via:
+- `POST /api/admin/daily-fact/refresh?secret=YOUR_SECRET`
+
+### Vercel Cron (recommended)
+- Add `DAILY_FACT_REFRESH_SECRET` in Vercel env vars
+- Create a Vercel Cron job (e.g. 00:05 UTC daily) to call:
+  - `POST https://YOUR_DOMAIN/api/admin/daily-fact/refresh?secret=YOUR_SECRET`
+
+### Attribution
+Facts are sourced from Wikidata (and optionally enriched with MusicBrainz links). Include attribution if you display source links.
 
 ## Contributing
 

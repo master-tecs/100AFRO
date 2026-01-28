@@ -221,6 +221,23 @@ model ChartEntry {
   @@map("chart_entries")
 }
 
+model OnThisDayFact {
+  id         String   @id @default(cuid())
+  month      Int
+  day        Int
+  year       Int?
+  text       String   @db.Text
+  sourceName String
+  sourceUrl  String?
+  externalId String?  @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([month, day])
+  @@index([updatedAt])
+  @@map("on_this_day_facts")
+}
+
 model Artist {
   id         String   @id @default(cuid())
   name       String   @unique

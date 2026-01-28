@@ -16,6 +16,7 @@ async function getHomeData() {
   let featuredArtists: any[] = [];
   let trendingTopics: any[] = [];
   let currentPoll = null;
+  let dailyFact: any = null;
 
   // Try to fetch data if DATABASE_URL and prisma are available
   try {
@@ -26,7 +27,10 @@ async function getHomeData() {
         status: "PUBLISHED" as const,
         OR: [{ publishAt: null }, { publishAt: { lte: now } }],
       };
-      const [fetchedFeaturedPost, fetchedSubFeaturedPosts, fetchedIndustryPosts, fetchedLatestVideos, fetchedTrendingPosts, fetchedFeaturedArtists, fetchedTrendingTopics, fetchedCurrentPoll] = await Promise.all([
+      const utcNow = new Date();
+      const month = utcNow.getUTCMonth() + 1;
+      const day = utcNow.getUTCDate();
+      const [fetchedFeaturedPost, fetchedSubFeaturedPosts, fetchedIndustryPosts, fetchedLatestVideos, fetchedTrendingPosts, fetchedFeaturedArtists, fetchedTrendingTopics, fetchedCurrentPoll, fetchedDailyFact] = await Promise.all([
         prismaClient.blogPost.findFirst({
           where: { ...publishedWhere, featured: true },
           include: { author: { select: { name: true } } },
@@ -63,6 +67,10 @@ async function getHomeData() {
         prismaClient.poll.findFirst({
           where: { active: true },
         }),
+        prismaClient.onThisDayFact.findFirst({
+          where: { month, day },
+          orderBy: { updatedAt: 'desc' },
+        }),
       ]);
 
       featuredPost = fetchedFeaturedPost;
@@ -73,6 +81,7 @@ async function getHomeData() {
       featuredArtists = fetchedFeaturedArtists;
       trendingTopics = fetchedTrendingTopics;
       currentPoll = fetchedCurrentPoll;
+      dailyFact = fetchedDailyFact;
     }
   } catch (error) {
     console.error('Error fetching home data:', error);
@@ -106,6 +115,7 @@ async function getHomeData() {
     featuredArtists,
     trendingTopics,
     currentPoll,
+    dailyFact,
   };
 }
 
@@ -120,6 +130,7 @@ export default async function Home() {
   const featuredArtists = data.featuredArtists;
   const trendingTopics = data.trendingTopics;
   const currentPoll = data.currentPoll;
+  const dailyFact = data.dailyFact;
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('en-US', {
@@ -393,12 +404,28 @@ export default async function Home() {
                         <span className="inline-block px-3 py-1 bg-purple-900/30 text-purple-400 text-xs font-bold uppercase tracking-widest rounded-sm mb-4">
                             On This Day in History
                         </span>
-                        <div className="text-6xl font-display font-bold text-white mb-4 opacity-20">2012</div>
+                        <div className="text-6xl font-display font-bold text-white mb-4 opacity-20">
+                          {dailyFact?.year || "—"}
+                        </div>
                         <p className="text-xl md:text-2xl font-bold text-white leading-relaxed">
-                            &quot;Oliver Twist by D&apos;banj enters the UK Top 10 Charts, marking a pivotal moment for Afrobeats global crossover.&quot;
+                          &quot;{dailyFact?.text || "No fact available yet — check back soon."}&quot;
                         </p>
                         <div className="mt-8 pt-6 border-t border-gray-800 flex items-center gap-2 text-sm text-gray-400 font-bold uppercase tracking-wider">
                             <Clock size={16} /> Daily Fact
+                            <span className="text-gray-600 font-semibold normal-case">
+                              —
+                              {dailyFact?.sourceUrl ? (
+                                <a
+                                  href={dailyFact.sourceUrl}
+                                  target="_blank"
+                                  className="ml-1 text-gray-400 hover:text-afro-primary underline underline-offset-4"
+                                >
+                                  {dailyFact.sourceName || "Source"}
+                                </a>
+                              ) : (
+                                <span className="ml-1">{dailyFact?.sourceName || "MusicBrainz/Wikidata"}</span>
+                              )}
+                            </span>
                         </div>
                     </div>
                 </div>
