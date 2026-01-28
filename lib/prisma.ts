@@ -4,7 +4,7 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Prisma configuration optimized for Cloudflare Edge Runtime
+// Prisma configuration
 // Handle missing DATABASE_URL gracefully for build-time operations
 const getPrismaClient = (): PrismaClient | null => {
   if (!process.env.DATABASE_URL) {
@@ -19,7 +19,7 @@ const getPrismaClient = (): PrismaClient | null => {
         process.env.NODE_ENV === "development"
           ? ["query", "error", "warn"]
           : ["error"],
-      // Use connection pooling URL for better performance on Cloudflare
+      // Use connection pooling URL for better performance
       datasources: {
         db: {
           url: process.env.DATABASE_URL,

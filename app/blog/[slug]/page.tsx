@@ -29,7 +29,7 @@ interface BlogDetailPageProps {
 }
 
 // Note: generateStaticParams cannot be used with edge runtime
-// Routes will be generated dynamically on Cloudflare Pages
+// Routes will be generated dynamically at request time
 
 export async function generateMetadata({ params }: BlogDetailPageProps) {
   const { slug } = await params;
