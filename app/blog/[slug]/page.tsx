@@ -23,6 +23,7 @@ import { escapeHtml } from "@/lib/utils";
 import BlogPostCard from "../../components/BlogPostCard";
 import CommentsSection from "../../components/CommentsSection";
 import NewsletterForm from "../../components/NewsletterForm";
+import BlogViewTracker from "../../components/BlogViewTracker";
 
 interface BlogDetailPageProps {
   params: Promise<{ slug: string }>;
@@ -177,6 +178,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
 
   return (
     <div className="bg-gray-900 min-h-screen">
+      <BlogViewTracker slug={post.slug} />
       {/* Hero Section */}
       <div className="relative w-full h-[60vh] md:h-[70vh]">
         <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/60 to-transparent z-10"></div>

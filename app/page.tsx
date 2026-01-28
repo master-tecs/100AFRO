@@ -64,6 +64,7 @@ async function getHomeData() {
         }),
         prismaClient.trendingTopic.findMany({
           take: 5,
+          orderBy: { updatedAt: "desc" },
         }),
         prismaClient.poll.findFirst({
           where: { active: true },

@@ -116,6 +116,7 @@ model BlogPost {
   updatedBy   User?        @relation("BlogPostUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
   comments    Comment[]
   revisions   BlogPostRevision[]
+  metricsDaily BlogPostMetricsDaily[]
   
   @@index([slug])
   @@index([category])
@@ -126,6 +127,24 @@ model BlogPost {
   @@index([publishedAt])
   @@index([tags], type: Gin)
   @@map("blog_posts")
+}
+
+model BlogPostMetricsDaily {
+  id          String   @id @default(cuid())
+  postId      String
+  date        DateTime @db.Date
+  pageviews   Int      @default(0)
+  uniqueViews Int      @default(0)
+  commentCount Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  post        BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, date])
+  @@index([date])
+  @@index([postId])
+  @@map("blog_post_metrics_daily")
 }
 
 model BlogPostRevision {
