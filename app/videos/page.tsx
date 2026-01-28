@@ -2,8 +2,6 @@ import React from 'react';
 import { prisma } from '@/lib/prisma';
 import VideoCard from '../components/VideoCard';
 
-export const runtime = 'edge';
-
 export default async function VideosPage() {
   // Handle missing DATABASE_URL or Prisma
   let videos: any[] = [];

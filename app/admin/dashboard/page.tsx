@@ -255,7 +255,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 flex font-sans">
+    <div className="min-h-screen bg-gray-950 flex h-screen overflow-hidden font-sans">
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div
@@ -268,7 +268,7 @@ export default function AdminDashboard() {
       <aside
         className={`
         fixed lg:static inset-y-0 left-0 z-50
-        w-64 bg-gray-900 border-r border-gray-800 
+        w-64 h-screen bg-gray-900 border-r border-gray-800 
         flex flex-col transform transition-transform duration-300 ease-in-out
         ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
@@ -361,7 +361,7 @@ export default function AdminDashboard() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-grow lg:ml-64 min-h-screen">
+      <main className="flex-1 h-screen overflow-y-auto">
         {/* Mobile Header */}
         <div className="lg:hidden sticky top-0 z-30 bg-gray-900 border-b border-gray-800 p-4 flex items-center justify-between">
           <button

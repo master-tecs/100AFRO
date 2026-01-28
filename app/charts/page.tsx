@@ -3,8 +3,6 @@ import { prisma } from '@/lib/prisma';
 import { ChartType, ChartTrend } from '@prisma/client';
 import { ArrowUp, ArrowDown, Minus, Sparkles } from 'lucide-react';
 
-export const runtime = 'edge';
-
 export default async function ChartsPage() {
   // Handle missing DATABASE_URL or Prisma
   let charts: any[] = [];

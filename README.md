@@ -9,6 +9,7 @@ A full-stack Next.js application for African entertainment content, featuring bl
 - **ORM**: Prisma
 - **Authentication**: NextAuth.js
 - **Media Storage**: Cloudinary
+- **Email Service**: Resend
 - **Styling**: Tailwind CSS
 - **Language**: TypeScript
 
@@ -22,6 +23,7 @@ A full-stack Next.js application for African entertainment content, featuring bl
 - ✅ User authentication
 - ✅ Image upload with Cloudinary
 - ✅ SEO optimized with metadata and sitemap
+- ✅ Professional newsletter subscription with email confirmation
 
 ## Getting Started
 
@@ -30,6 +32,7 @@ A full-stack Next.js application for African entertainment content, featuring bl
 - Node.js 18+
 - PostgreSQL database (Neon recommended)
 - Cloudinary account
+- Resend account (for newsletter emails)
 - NextAuth providers (Google, GitHub, etc.)
 
 ### Installation
@@ -55,6 +58,11 @@ NEXTAUTH_URL="http://localhost:3000"
 CLOUDINARY_CLOUD_NAME="your-cloud-name"
 CLOUDINARY_API_KEY="your-api-key"
 CLOUDINARY_API_SECRET="your-api-secret"
+
+# Email Service (Resend) - Required for newsletter functionality
+RESEND_API_KEY="re_your-resend-api-key"
+RESEND_FROM_EMAIL="100AFRO <newsletter@100afro.com>" # Optional, defaults to newsletter@100afro.com
+NEXT_PUBLIC_SITE_URL="http://localhost:3000" # Optional, defaults to NEXTAUTH_URL or localhost:3000
 
 # OAuth Providers (optional)
 GOOGLE_CLIENT_ID=""
@@ -138,6 +146,7 @@ The application uses the following main models:
 - `Artist` - Featured artists
 - `TrendingTopic` - Trending topics
 - `Poll` - Community polls
+- `NewsletterSubscriber` - Newsletter subscribers with email verification
 
 ## Full-Text Search
 

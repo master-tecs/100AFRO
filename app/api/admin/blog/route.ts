@@ -4,8 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { BlogCategory } from "@prisma/client";
 import { slugify } from "@/lib/utils";
 
-export const runtime = 'edge';
-
 export async function GET(request: NextRequest) {
   try {
     const user = await getUser(request);

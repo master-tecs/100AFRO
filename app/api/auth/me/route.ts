@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@/lib/get-user";
 
-export const runtime = 'edge';
-
 export async function GET(request: NextRequest) {
   try {
     const user = await getUser(request);

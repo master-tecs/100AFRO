@@ -21,8 +21,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import BlogPostCard from "../../components/BlogPostCard";
 import CommentsSection from "../../components/CommentsSection";
-
-export const runtime = "edge";
+import NewsletterForm from "../../components/NewsletterForm";
 
 interface BlogDetailPageProps {
   params: Promise<{ slug: string }>;
@@ -312,25 +311,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
                 Get the latest African entertainment news delivered straight to
                 your inbox.
               </p>
-              <form
-                action="/api/newsletter"
-                method="POST"
-                className="space-y-3"
-              >
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="Your email address"
-                  className="w-full px-4 py-3 rounded-lg mb-3 bg-white/90 border-0 placeholder-gray-500 focus:ring-2 focus:ring-black"
-                  required
-                />
-                <button
-                  type="submit"
-                  className="w-full bg-black text-white font-bold py-3 rounded-lg hover:bg-gray-800 transition-colors uppercase text-sm tracking-wide"
-                >
-                  Subscribe Now
-                </button>
-              </form>
+              <NewsletterForm variant="sidebar" />
             </div>
 
             {/* Trending Posts Widget */}

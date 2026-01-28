@@ -4,6 +4,7 @@ import { ArrowRight, PlayCircle, Clock, TrendingUp, BarChart3, Star, Hash, Calen
 import { prisma } from '@/lib/prisma';
 import BlogPostCard from './components/BlogPostCard';
 import VideoCard from './components/VideoCard';
+import NewsletterForm from './components/NewsletterForm';
 
 async function getHomeData() {
   // Initialize with empty data
@@ -412,18 +413,7 @@ export default async function Home() {
           <p className="text-gray-400 text-xl mb-10 font-medium max-w-2xl mx-auto">
             Get exclusive access to behind-the-scenes content, industry analysis, and the hottest playlists delivered to your inbox weekly.
           </p>
-          <form className="flex flex-col sm:flex-row gap-4 justify-center max-w-lg mx-auto" action="/api/newsletter" method="POST">
-            <input
-              type="email"
-              name="email"
-              placeholder="Enter your email address"
-              className="px-6 py-4 rounded-full border border-gray-700 bg-gray-900 focus:ring-2 focus:ring-afro-primary focus:border-transparent text-white w-full font-medium placeholder-gray-500 shadow-xl"
-              required
-            />
-            <button type="submit" className="bg-afro-primary text-black font-bold py-4 px-10 rounded-full hover:bg-white transition-colors shadow-xl whitespace-nowrap">
-              Subscribe
-            </button>
-          </form>
+          <NewsletterForm variant="default" />
           <p className="text-gray-600 text-xs mt-6 font-bold uppercase tracking-widest">Join 500,000+ Subscribers</p>
         </div>
       </section>

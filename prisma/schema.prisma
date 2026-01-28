@@ -188,13 +188,19 @@ model Poll {
 }
 
 model NewsletterSubscriber {
-  id         String   @id @default(cuid())
-  email      String   @unique
-  subscribedAt DateTime @default(now())
-  active     Boolean  @default(true)
+  id               String    @id @default(cuid())
+  email            String    @unique
+  subscribedAt     DateTime  @default(now())
+  active           Boolean   @default(true)
+  verified         Boolean   @default(false)
+  verificationToken String?  @unique
+  verifiedAt       DateTime?
+  unsubscribedAt   DateTime?
   
   @@index([email])
   @@index([active])
+  @@index([verified])
+  @@index([verificationToken])
   @@map("newsletter_subscribers")
 }
 

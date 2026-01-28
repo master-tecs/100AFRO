@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import Header from './components/Header'
-import Footer from './components/Footer'
+import ConditionalLayout from './components/ConditionalLayout'
 import { Providers } from './providers'
 
 export const metadata: Metadata = {
@@ -19,11 +18,9 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className="flex flex-col min-h-screen font-sans bg-gray-900 text-gray-100">
         <Providers>
-          <Header />
-          <main className="flex-grow">
+          <ConditionalLayout>
             {children}
-          </main>
-          <Footer />
+          </ConditionalLayout>
         </Providers>
       </body>
     </html>
