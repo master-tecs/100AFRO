@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { resend, FROM_EMAIL } from '@/lib/resend';
-import { WelcomeEmail, WelcomeEmailText } from '@/lib/emails/welcome-email';
-import { render } from '@react-email/render';
+import { getWelcomeEmailHtml, WelcomeEmailText } from '@/lib/emails/welcome-email';
 
 export async function GET(request: NextRequest) {
   try {
@@ -48,7 +47,7 @@ export async function GET(request: NextRequest) {
           from: FROM_EMAIL,
           to: subscriber.email,
           subject: 'Welcome to 100AFRO!',
-          html: render(WelcomeEmail()),
+          html: getWelcomeEmailHtml(),
           text: WelcomeEmailText(),
         });
       } catch (emailError) {

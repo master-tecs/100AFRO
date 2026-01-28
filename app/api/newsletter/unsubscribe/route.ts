@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { resend, FROM_EMAIL } from '@/lib/resend';
-import { UnsubscribeEmail, UnsubscribeEmailText } from '@/lib/emails/unsubscribe-email';
-import { render } from '@react-email/render';
+import { getUnsubscribeEmailHtml, UnsubscribeEmailText } from '@/lib/emails/unsubscribe-email';
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,7 +51,7 @@ export async function POST(request: NextRequest) {
           from: FROM_EMAIL,
           to: email,
           subject: 'You have been unsubscribed from 100AFRO',
-          html: render(UnsubscribeEmail({ unsubscribeUrl: '' })),
+          html: getUnsubscribeEmailHtml(),
           text: UnsubscribeEmailText(),
         });
       } catch (emailError) {

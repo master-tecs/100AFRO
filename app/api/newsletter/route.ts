@@ -3,8 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { randomBytes } from 'crypto';
 import { resend, FROM_EMAIL, SITE_URL } from '@/lib/resend';
-import { ConfirmationEmail, ConfirmationEmailText } from '@/lib/emails/confirmation-email';
-import { render } from '@react-email/render';
+import { getConfirmationEmailHtml, ConfirmationEmailText } from '@/lib/emails/confirmation-email';
 
 const emailSchema = z.string().email('Invalid email address');
 
@@ -62,7 +61,7 @@ export async function POST(request: NextRequest) {
             from: FROM_EMAIL,
             to: validatedEmail,
             subject: 'Confirm your subscription to 100AFRO',
-            html: render(ConfirmationEmail({ verificationUrl })),
+            html: getConfirmationEmailHtml(verificationUrl),
             text: ConfirmationEmailText({ verificationUrl }),
           });
         } catch (emailError) {
@@ -101,7 +100,7 @@ export async function POST(request: NextRequest) {
           from: FROM_EMAIL,
           to: validatedEmail,
           subject: 'Confirm your subscription to 100AFRO',
-          html: render(ConfirmationEmail({ verificationUrl })),
+          html: getConfirmationEmailHtml(verificationUrl),
           text: ConfirmationEmailText({ verificationUrl }),
         });
       } catch (emailError) {
