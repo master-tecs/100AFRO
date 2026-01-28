@@ -9,6 +9,7 @@ A full-stack Next.js application for African entertainment content, featuring bl
 - **ORM**: Prisma
 - **Authentication**: NextAuth.js
 - **Media Storage**: Cloudinary
+- **Email Service**: Resend
 - **Styling**: Tailwind CSS
 - **Language**: TypeScript
 
@@ -18,10 +19,11 @@ A full-stack Next.js application for African entertainment content, featuring bl
 - ✅ Full-text search using PostgreSQL
 - ✅ Blog posts with comments
 - ✅ Video gallery with YouTube integration
-- ✅ Music charts
+- ✅ Music charts (Spotify-powered live charts + DB fallback)
 - ✅ User authentication
 - ✅ Image upload with Cloudinary
 - ✅ SEO optimized with metadata and sitemap
+- ✅ Professional newsletter subscription with email confirmation
 
 ## Getting Started
 
@@ -30,6 +32,7 @@ A full-stack Next.js application for African entertainment content, featuring bl
 - Node.js 18+
 - PostgreSQL database (Neon recommended)
 - Cloudinary account
+- Resend account (for newsletter emails)
 - NextAuth providers (Google, GitHub, etc.)
 
 ### Installation
@@ -55,6 +58,26 @@ NEXTAUTH_URL="http://localhost:3000"
 CLOUDINARY_CLOUD_NAME="your-cloud-name"
 CLOUDINARY_API_KEY="your-api-key"
 CLOUDINARY_API_SECRET="your-api-secret"
+
+# Spotify (Live charts)
+SPOTIFY_CLIENT_ID=""
+SPOTIFY_CLIENT_SECRET=""
+# Optional (recommended): set official playlist IDs for Top 50 per country
+SPOTIFY_TOP50_PLAYLIST_NG=""
+SPOTIFY_TOP50_PLAYLIST_GH=""
+SPOTIFY_TOP50_PLAYLIST_ZA=""
+
+# Daily Fact (On This Day in History)
+# Used by /api/admin/daily-fact/refresh for cron automation
+DAILY_FACT_REFRESH_SECRET=""
+# Optional but recommended user agents (some public APIs expect this)
+WIKIDATA_USER_AGENT="100AFRO/1.0 (admin@100afro.com)"
+MUSICBRAINZ_USER_AGENT="100AFRO/1.0 (admin@100afro.com)"
+
+# Email Service (Resend) - Required for newsletter functionality
+RESEND_API_KEY="re_your-resend-api-key"
+RESEND_FROM_EMAIL="100AFRO <newsletter@100afro.com>" # Optional, defaults to newsletter@100afro.com
+NEXT_PUBLIC_SITE_URL="http://localhost:3000" # Optional, defaults to NEXTAUTH_URL or localhost:3000
 
 # OAuth Providers (optional)
 GOOGLE_CLIENT_ID=""
@@ -138,6 +161,7 @@ The application uses the following main models:
 - `Artist` - Featured artists
 - `TrendingTopic` - Trending topics
 - `Poll` - Community polls
+- `NewsletterSubscriber` - Newsletter subscribers with email verification
 
 ## Full-Text Search
 
@@ -160,6 +184,24 @@ Make sure to:
 - Run `npm run build` to test the build
 - Configure your database connection
 - Set up Cloudinary and OAuth providers
+
+## Spotify Charts Attribution
+
+The charts page uses Spotify APIs to display **metadata** (track/album titles, artists, artwork) and links back to Spotify.
+We do **not** host or redistribute audio. Ensure you follow Spotify branding/attribution requirements.
+
+## Daily Fact (On This Day in History) Automation
+
+The homepage “On This Day in History” block is backed by the `OnThisDayFact` table and can be refreshed daily via:
+- `POST /api/admin/daily-fact/refresh?secret=YOUR_SECRET`
+
+### Vercel Cron (recommended)
+- Add `DAILY_FACT_REFRESH_SECRET` in Vercel env vars
+- Create a Vercel Cron job (e.g. 00:05 UTC daily) to call:
+  - `POST https://YOUR_DOMAIN/api/admin/daily-fact/refresh?secret=YOUR_SECRET`
+
+### Attribution
+Facts are sourced from Wikidata (and optionally enriched with MusicBrainz links). Include attribution if you display source links.
 
 ## Contributing
 

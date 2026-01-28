@@ -21,10 +21,16 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({ postId, initialCommen
   const [comments, setComments] = useState(initialComments);
   const [newComment, setNewComment] = useState('');
   const [commentName, setCommentName] = useState('');
+  const [notice, setNotice] = useState<string | null>(null);
+  const [noticeType, setNoticeType] = useState<'success' | 'warning' | 'error'>('success');
+  const [submitting, setSubmitting] = useState(false);
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || !commentName.trim()) return;
+    setNotice(null);
+    setNoticeType('success');
+    setSubmitting(true);
 
     try {
       const response = await fetch('/api/comments', {
@@ -40,13 +46,25 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({ postId, initialCommen
       });
 
       if (response.ok) {
-        const comment = await response.json();
-        setComments([comment, ...comments]);
+        const result = await response.json();
+        setNotice(result.message || 'Thanks! Your comment was submitted.');
+        setNoticeType(result?.pending ? 'warning' : 'success');
+        if (!result?.pending && result?.comment) {
+          setComments((prev) => [result.comment, ...prev]);
+        }
         setNewComment('');
         // Keep name for convenience
+      } else {
+        const err = await response.json().catch(() => ({}));
+        setNotice(err.error || 'Failed to submit comment. Please try again.');
+        setNoticeType('error');
       }
     } catch (error) {
       console.error('Error submitting comment:', error);
+      setNotice('Failed to submit comment. Please try again.');
+      setNoticeType('error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -79,6 +97,19 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({ postId, initialCommen
 
       {/* Comment Form */}
       <form onSubmit={handleCommentSubmit} className="bg-gray-800 p-6 rounded-2xl border border-gray-700 mb-10">
+        {notice && (
+          <div
+            className={`mb-4 rounded-xl px-4 py-3 text-sm font-medium border ${
+              noticeType === 'success'
+                ? 'border-green-500/30 bg-green-500/10 text-green-200'
+                : noticeType === 'warning'
+                  ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-200'
+                  : 'border-red-500/30 bg-red-500/10 text-red-200'
+            }`}
+          >
+            {notice}
+          </div>
+        )}
         <div className="mb-4">
           <label className="block text-xs font-bold uppercase text-gray-500 mb-2">Display Name</label>
           <input 
@@ -88,6 +119,7 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({ postId, initialCommen
             className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-afro-primary"
             placeholder="Enter your name"
             required
+            disabled={submitting}
           />
         </div>
         <div className="mb-4">
@@ -99,11 +131,12 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({ postId, initialCommen
             className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-afro-primary resize-none"
             placeholder="Join the discussion..."
             required
+            disabled={submitting}
           ></textarea>
         </div>
         <div className="flex justify-end">
-          <button type="submit" className="bg-white text-black font-bold py-2 px-6 rounded-full hover:bg-afro-primary transition-colors flex items-center gap-2">
-            <Send size={16} /> Post Comment
+          <button type="submit" disabled={submitting} className="bg-white text-black font-bold py-2 px-6 rounded-full hover:bg-afro-primary transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+            <Send size={16} /> {submitting ? 'Submitting...' : 'Post Comment'}
           </button>
         </div>
       </form>

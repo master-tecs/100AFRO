@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { BlogCategory } from '@prisma/client';
 
-export const runtime = 'edge';
-
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -20,7 +18,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const where: any = {};
+    const now = new Date();
+    const where: any = {
+      status: 'PUBLISHED',
+      OR: [{ publishAt: null }, { publishAt: { lte: now } }],
+    };
     if (category) {
       where.category = category;
     }
@@ -39,7 +41,7 @@ export async function GET(request: NextRequest) {
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          publishedAt: 'desc',
         },
         skip,
         take: limit,
@@ -66,45 +68,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    // TODO: Add authentication check for admin
-    const body = await request.json();
-    const { title, slug, excerpt, content, category, featured, imageUrl, authorId } = body;
-
-    if (!prisma) {
       return NextResponse.json(
-        { error: 'Database not available' },
-        { status: 503 }
-      );
-    }
-
-    const post = await prisma.blogPost.create({
-      data: {
-        title,
-        slug,
-        excerpt,
-        content,
-        category: category as BlogCategory,
-        featured: featured || false,
-        imageUrl,
-        authorId,
-      },
-      include: {
-        author: {
-          select: {
-            name: true,
-          },
-        },
-      },
-    });
-
-    return NextResponse.json(post, { status: 201 });
-  } catch (error) {
-    console.error('Error creating blog post:', error);
-    return NextResponse.json(
-      { error: 'Failed to create blog post' },
-      { status: 500 }
+    { error: 'Method not allowed' },
+    { status: 405 }
     );
-  }
 }
 

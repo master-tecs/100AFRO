@@ -19,17 +19,18 @@ import {
   Check,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { escapeHtml } from "@/lib/utils";
 import BlogPostCard from "../../components/BlogPostCard";
 import CommentsSection from "../../components/CommentsSection";
-
-export const runtime = "edge";
+import NewsletterForm from "../../components/NewsletterForm";
+import BlogViewTracker from "../../components/BlogViewTracker";
 
 interface BlogDetailPageProps {
   params: Promise<{ slug: string }>;
 }
 
 // Note: generateStaticParams cannot be used with edge runtime
-// Routes will be generated dynamically on Cloudflare Pages
+// Routes will be generated dynamically at request time
 
 export async function generateMetadata({ params }: BlogDetailPageProps) {
   const { slug } = await params;
@@ -42,8 +43,13 @@ export async function generateMetadata({ params }: BlogDetailPageProps) {
     };
   }
 
-  const post = await prisma.blogPost.findUnique({
-    where: { slug },
+  const now = new Date();
+  const post = await prisma.blogPost.findFirst({
+    where: {
+      slug,
+      status: "PUBLISHED",
+      OR: [{ publishAt: null }, { publishAt: { lte: now } }],
+    },
     include: { author: { select: { name: true } } },
   });
 
@@ -76,11 +82,16 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
 
   // Handle missing DATABASE_URL or Prisma
   let post = null;
+  const now = new Date();
 
   try {
     if (process.env.DATABASE_URL && prisma !== null) {
-      post = await prisma.blogPost.findUnique({
-        where: { slug },
+      post = await prisma.blogPost.findFirst({
+        where: {
+          slug,
+          status: "PUBLISHED",
+          OR: [{ publishAt: null }, { publishAt: { lte: now } }],
+        },
         include: {
           author: {
             select: {
@@ -90,6 +101,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
             },
           },
           comments: {
+            where: { status: "APPROVED" },
             orderBy: {
               createdAt: "desc",
             },
@@ -117,6 +129,8 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
           where: {
             category: post.category,
             id: { not: post.id },
+            status: "PUBLISHED",
+            OR: [{ publishAt: null }, { publishAt: { lte: now } }],
           },
           include: {
             author: {
@@ -127,11 +141,14 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
           },
           take: 3,
           orderBy: {
-            createdAt: "desc",
+            publishedAt: "desc",
           },
         }),
         prisma.blogPost.findMany({
-          take: 4,
+          where: {
+            status: "PUBLISHED",
+            OR: [{ publishAt: null }, { publishAt: { lte: now } }],
+          },
           include: {
             author: {
               select: {
@@ -140,8 +157,9 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
             },
           },
           orderBy: {
-            createdAt: "desc",
+            publishedAt: "desc",
           },
+          take: 4,
         }),
       ]);
     }
@@ -160,6 +178,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
 
   return (
     <div className="bg-gray-900 min-h-screen">
+      <BlogViewTracker slug={post.slug} />
       {/* Hero Section */}
       <div className="relative w-full h-[60vh] md:h-[70vh]">
         <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/60 to-transparent z-10"></div>
@@ -233,7 +252,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
 
               <div
                 dangerouslySetInnerHTML={{
-                  __html: post.content.replace(/\n/g, "<br />"),
+                  __html: escapeHtml(post.content).replace(/\n/g, "<br />"),
                 }}
               />
             </div>
@@ -312,25 +331,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
                 Get the latest African entertainment news delivered straight to
                 your inbox.
               </p>
-              <form
-                action="/api/newsletter"
-                method="POST"
-                className="space-y-3"
-              >
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="Your email address"
-                  className="w-full px-4 py-3 rounded-lg mb-3 bg-white/90 border-0 placeholder-gray-500 focus:ring-2 focus:ring-black"
-                  required
-                />
-                <button
-                  type="submit"
-                  className="w-full bg-black text-white font-bold py-3 rounded-lg hover:bg-gray-800 transition-colors uppercase text-sm tracking-wide"
-                >
-                  Subscribe Now
-                </button>
-              </form>
+              <NewsletterForm variant="sidebar" />
             </div>
 
             {/* Trending Posts Widget */}

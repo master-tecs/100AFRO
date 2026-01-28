@@ -137,9 +137,18 @@ async function main() {
             ". " +
             post.excerpt,
         authorId,
+        createdById: authorId,
         category: categoryMap[post.category] || BlogCategory.News,
         featured: post.featured || false,
         imageUrl: post.imageUrl,
+        status: "PUBLISHED",
+        publishAt: null,
+        publishedAt: parseDate(post.date),
+        tags: [],
+        metaTitle: null,
+        metaDescription: null,
+        canonicalUrl: null,
+        ogImageUrl: null,
         createdAt: parseDate(post.date),
       },
     });

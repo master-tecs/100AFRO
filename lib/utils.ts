@@ -23,6 +23,15 @@ export function slugify(text: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
+export function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // Export slugify for use in API routes
 export { slugify as default }
 

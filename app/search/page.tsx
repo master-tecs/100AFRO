@@ -3,8 +3,6 @@ import { prisma } from '@/lib/prisma';
 import BlogPostCard from '../components/BlogPostCard';
 import VideoCard from '../components/VideoCard';
 
-export const runtime = 'edge';
-
 interface SearchPageProps {
   searchParams: Promise<{ q?: string }>;
 }

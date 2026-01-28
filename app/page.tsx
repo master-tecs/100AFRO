@@ -1,9 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, PlayCircle, Clock, TrendingUp, BarChart3, Star, Hash, Calendar } from 'lucide-react';
+import { ArrowRight, PlayCircle, Clock, TrendingUp, Star, Hash, Calendar, BarChart3 } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import BlogPostCard from './components/BlogPostCard';
 import VideoCard from './components/VideoCard';
+import NewsletterForm from './components/NewsletterForm';
+import PollWidget from './components/PollWidget';
 
 async function getHomeData() {
   // Initialize with empty data
@@ -15,46 +17,61 @@ async function getHomeData() {
   let featuredArtists: any[] = [];
   let trendingTopics: any[] = [];
   let currentPoll = null;
+  let dailyFact: any = null;
 
   // Try to fetch data if DATABASE_URL and prisma are available
   try {
     if (process.env.DATABASE_URL && prisma !== null) {
       const prismaClient = prisma; // Type guard
-      const [fetchedFeaturedPost, fetchedSubFeaturedPosts, fetchedIndustryPosts, fetchedLatestVideos, fetchedTrendingPosts, fetchedFeaturedArtists, fetchedTrendingTopics, fetchedCurrentPoll] = await Promise.all([
+      const now = new Date();
+      const publishedWhere = {
+        status: "PUBLISHED" as const,
+        OR: [{ publishAt: null }, { publishAt: { lte: now } }],
+      };
+      const utcNow = new Date();
+      const month = utcNow.getUTCMonth() + 1;
+      const day = utcNow.getUTCDate();
+      const [fetchedFeaturedPost, fetchedSubFeaturedPosts, fetchedIndustryPosts, fetchedLatestVideos, fetchedTrendingPosts, fetchedFeaturedArtists, fetchedTrendingTopics, fetchedCurrentPoll, fetchedDailyFact] = await Promise.all([
         prismaClient.blogPost.findFirst({
-          where: { featured: true },
+          where: { ...publishedWhere, featured: true },
           include: { author: { select: { name: true } } },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { publishedAt: 'desc' },
         }),
         prismaClient.blogPost.findMany({
-          where: { featured: false },
+          where: { ...publishedWhere, featured: false },
           include: { author: { select: { name: true } } },
           take: 2,
-          orderBy: { createdAt: 'desc' },
+          orderBy: { publishedAt: 'desc' },
         }),
         prismaClient.blogPost.findMany({
-          where: { category: 'Industry' },
+          where: { ...publishedWhere, category: 'Industry' },
           include: { author: { select: { name: true } } },
           take: 3,
-          orderBy: { createdAt: 'desc' },
+          orderBy: { publishedAt: 'desc' },
         }),
         prismaClient.video.findMany({
           take: 4,
           orderBy: { createdAt: 'desc' },
         }),
         prismaClient.blogPost.findMany({
+          where: publishedWhere,
           take: 4,
           include: { author: { select: { name: true } } },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { publishedAt: 'desc' },
         }),
         prismaClient.artist.findMany({
           take: 6,
         }),
         prismaClient.trendingTopic.findMany({
           take: 5,
+          orderBy: { updatedAt: "desc" },
         }),
         prismaClient.poll.findFirst({
           where: { active: true },
+        }),
+        prismaClient.onThisDayFact.findFirst({
+          where: { month, day },
+          orderBy: { updatedAt: 'desc' },
         }),
       ]);
 
@@ -66,6 +83,7 @@ async function getHomeData() {
       featuredArtists = fetchedFeaturedArtists;
       trendingTopics = fetchedTrendingTopics;
       currentPoll = fetchedCurrentPoll;
+      dailyFact = fetchedDailyFact;
     }
   } catch (error) {
     console.error('Error fetching home data:', error);
@@ -99,6 +117,7 @@ async function getHomeData() {
     featuredArtists,
     trendingTopics,
     currentPoll,
+    dailyFact,
   };
 }
 
@@ -113,6 +132,7 @@ export default async function Home() {
   const featuredArtists = data.featuredArtists;
   const trendingTopics = data.trendingTopics;
   const currentPoll = data.currentPoll;
+  const dailyFact = data.dailyFact;
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('en-US', {
@@ -364,18 +384,7 @@ export default async function Home() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                 
                 {/* Poll of the Week */}
-                {currentPoll && (
-                  <div className="bg-gray-800/50 rounded-2xl p-8 border border-gray-700">
-                      <div className="flex items-center gap-3 mb-6">
-                          <div className="p-2 bg-afro-primary/20 text-afro-primary rounded-lg"><BarChart3 size={24} /></div>
-                          <h3 className="text-2xl font-bold font-display text-white">Poll of the Week</h3>
-                      </div>
-                      
-                      <h4 className="text-xl font-bold text-white mb-6">{currentPoll.question}</h4>
-                      
-                      <p className="text-gray-400 text-sm">Vote on the blog page</p>
-                  </div>
-                )}
+                <PollWidget initialPoll={null} />
 
                 {/* On This Day in History */}
                 <div className="bg-gray-950 rounded-2xl p-8 border border-gray-800 relative overflow-hidden flex flex-col justify-center">
@@ -386,12 +395,28 @@ export default async function Home() {
                         <span className="inline-block px-3 py-1 bg-purple-900/30 text-purple-400 text-xs font-bold uppercase tracking-widest rounded-sm mb-4">
                             On This Day in History
                         </span>
-                        <div className="text-6xl font-display font-bold text-white mb-4 opacity-20">2012</div>
+                        <div className="text-6xl font-display font-bold text-white mb-4 opacity-20">
+                          {dailyFact?.year || "—"}
+                        </div>
                         <p className="text-xl md:text-2xl font-bold text-white leading-relaxed">
-                            &quot;Oliver Twist by D&apos;banj enters the UK Top 10 Charts, marking a pivotal moment for Afrobeats global crossover.&quot;
+                          &quot;{dailyFact?.text || "No fact available yet — check back soon."}&quot;
                         </p>
                         <div className="mt-8 pt-6 border-t border-gray-800 flex items-center gap-2 text-sm text-gray-400 font-bold uppercase tracking-wider">
                             <Clock size={16} /> Daily Fact
+                            <span className="text-gray-600 font-semibold normal-case">
+                              —
+                              {dailyFact?.sourceUrl ? (
+                                <a
+                                  href={dailyFact.sourceUrl}
+                                  target="_blank"
+                                  className="ml-1 text-gray-400 hover:text-afro-primary underline underline-offset-4"
+                                >
+                                  {dailyFact.sourceName || "Source"}
+                                </a>
+                              ) : (
+                                <span className="ml-1">{dailyFact?.sourceName || "MusicBrainz/Wikidata"}</span>
+                              )}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -412,18 +437,7 @@ export default async function Home() {
           <p className="text-gray-400 text-xl mb-10 font-medium max-w-2xl mx-auto">
             Get exclusive access to behind-the-scenes content, industry analysis, and the hottest playlists delivered to your inbox weekly.
           </p>
-          <form className="flex flex-col sm:flex-row gap-4 justify-center max-w-lg mx-auto" action="/api/newsletter" method="POST">
-            <input
-              type="email"
-              name="email"
-              placeholder="Enter your email address"
-              className="px-6 py-4 rounded-full border border-gray-700 bg-gray-900 focus:ring-2 focus:ring-afro-primary focus:border-transparent text-white w-full font-medium placeholder-gray-500 shadow-xl"
-              required
-            />
-            <button type="submit" className="bg-afro-primary text-black font-bold py-4 px-10 rounded-full hover:bg-white transition-colors shadow-xl whitespace-nowrap">
-              Subscribe
-            </button>
-          </form>
+          <NewsletterForm variant="default" />
           <p className="text-gray-600 text-xs mt-6 font-bold uppercase tracking-widest">Join 500,000+ Subscribers</p>
         </div>
       </section>

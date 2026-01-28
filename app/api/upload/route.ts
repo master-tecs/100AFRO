@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@/lib/get-user";
 import { uploadImage } from "@/lib/cloudinary";
 
-export const runtime = 'edge';
-
 export async function POST(request: NextRequest) {
   try {
     // Check authentication

@@ -16,6 +16,20 @@ enum UserRole {
   ADMIN
 }
 
+enum PostStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CommentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SPAM
+}
+
 enum BlogCategory {
   Music
   Culture
@@ -58,7 +72,12 @@ model User {
   
   // Relations
   blogPosts     BlogPost[]
+  createdBlogPosts   BlogPost[]         @relation("BlogPostCreatedBy")
+  updatedBlogPosts   BlogPost[]         @relation("BlogPostUpdatedBy")
+  blogPostRevisions  BlogPostRevision[] @relation("BlogPostRevisionCreatedBy")
   comments      Comment[]
+  moderatedComments  Comment[]          @relation("CommentModeratedBy")
+  pollVotes     PollVote[]
   accounts      Account[]
   sessions      Session[]
   
@@ -75,6 +94,16 @@ model BlogPost {
   category    BlogCategory
   featured    Boolean      @default(false)
   imageUrl    String
+  status      PostStatus   @default(DRAFT)
+  publishAt   DateTime?
+  publishedAt DateTime?
+  tags        String[]     @default([])
+  metaTitle        String?
+  metaDescription  String?
+  canonicalUrl     String?
+  ogImageUrl       String?
+  createdById String
+  updatedById String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   
@@ -83,13 +112,68 @@ model BlogPost {
   
   // Relations
   author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdBy   User         @relation("BlogPostCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy   User?        @relation("BlogPostUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
   comments    Comment[]
+  revisions   BlogPostRevision[]
+  metricsDaily BlogPostMetricsDaily[]
   
   @@index([slug])
   @@index([category])
   @@index([featured])
   @@index([createdAt])
+  @@index([authorId])
+  @@index([status, publishAt])
+  @@index([publishedAt])
+  @@index([tags], type: Gin)
   @@map("blog_posts")
+}
+
+model BlogPostMetricsDaily {
+  id          String   @id @default(cuid())
+  postId      String
+  date        DateTime @db.Date
+  pageviews   Int      @default(0)
+  uniqueViews Int      @default(0)
+  commentCount Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  post        BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, date])
+  @@index([date])
+  @@index([postId])
+  @@map("blog_post_metrics_daily")
+}
+
+model BlogPostRevision {
+  id          String       @id @default(cuid())
+  postId      String
+  title       String
+  slug        String
+  excerpt     String       @db.Text
+  content     String       @db.Text
+  category    BlogCategory
+  featured    Boolean
+  imageUrl    String
+  status      PostStatus
+  publishAt   DateTime?
+  publishedAt DateTime?
+  tags        String[]     @default([])
+  metaTitle        String?
+  metaDescription  String?
+  canonicalUrl     String?
+  ogImageUrl       String?
+  createdAt   DateTime     @default(now())
+  createdById String
+
+  post        BlogPost     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdBy   User         @relation("BlogPostRevisionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([postId])
+  @@index([createdAt])
+  @@map("blog_post_revisions")
 }
 
 model Comment {
@@ -99,15 +183,21 @@ model Comment {
   author    String   // Guest author name
   content   String   @db.Text
   likes     Int      @default(0)
+  status    CommentStatus @default(PENDING)
+  moderatedAt DateTime?
+  moderatedById String?
+  moderationReason String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
   // Relations
   post      BlogPost? @relation(fields: [postId], references: [id], onDelete: Cascade)
   user      User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  moderatedBy User?   @relation("CommentModeratedBy", fields: [moderatedById], references: [id], onDelete: SetNull)
   
   @@index([postId])
   @@index([createdAt])
+  @@index([status])
 }
 
 model Video {
@@ -151,6 +241,23 @@ model ChartEntry {
   @@map("chart_entries")
 }
 
+model OnThisDayFact {
+  id         String   @id @default(cuid())
+  month      Int
+  day        Int
+  year       Int?
+  text       String   @db.Text
+  sourceName String
+  sourceUrl  String?
+  externalId String?  @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([month, day])
+  @@index([updatedAt])
+  @@map("on_this_day_facts")
+}
+
 model Artist {
   id         String   @id @default(cuid())
   name       String   @unique
@@ -180,21 +287,49 @@ model Poll {
   question  String   @db.Text
   options   Json     // Array of { id, text, votes }
   active    Boolean  @default(true)
+  startsAt  DateTime?
+  endsAt    DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  votes     PollVote[]
   
   @@index([active])
   @@map("polls")
 }
 
+model PollVote {
+  id        String   @id @default(cuid())
+  pollId    String
+  optionId  String
+  userId    String?
+  guestId   String?
+  createdAt DateTime @default(now())
+
+  poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([pollId, userId])
+  @@unique([pollId, guestId])
+  @@index([pollId])
+  @@index([createdAt])
+  @@map("poll_votes")
+}
+
 model NewsletterSubscriber {
-  id         String   @id @default(cuid())
-  email      String   @unique
-  subscribedAt DateTime @default(now())
-  active     Boolean  @default(true)
+  id               String    @id @default(cuid())
+  email            String    @unique
+  subscribedAt     DateTime  @default(now())
+  active           Boolean   @default(true)
+  verified         Boolean   @default(false)
+  verificationToken String?  @unique
+  verifiedAt       DateTime?
+  unsubscribedAt   DateTime?
   
   @@index([email])
   @@index([active])
+  @@index([verified])
+  @@index([verificationToken])
   @@map("newsletter_subscribers")
 }
 
