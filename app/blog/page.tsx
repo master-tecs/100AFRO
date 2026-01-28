@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma';
 import BlogPostCard from '../components/BlogPostCard';
 import { BlogCategory } from '@prisma/client';
 
+export const dynamic = 'force-dynamic';
+
 interface BlogListPageProps {
   searchParams: Promise<{ category?: string }>;
 }

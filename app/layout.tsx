@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Script from 'next/script'
+import { Suspense } from 'react'
 import './globals.css'
 import ConditionalLayout from './components/ConditionalLayout'
 import { Providers } from './providers'
@@ -35,7 +36,9 @@ export default function RootLayout({
                 gtag('config', '${gaId}', { send_page_view: false });
               `}
             </Script>
-            <GoogleAnalytics gaId={gaId} />
+            <Suspense fallback={null}>
+              <GoogleAnalytics gaId={gaId} />
+            </Suspense>
           </>
         )}
         <Providers>

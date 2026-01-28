@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import BlogPostCard from '../components/BlogPostCard';
 import VideoCard from '../components/VideoCard';
 
+export const dynamic = 'force-dynamic';
+
 interface SearchPageProps {
   searchParams: Promise<{ q?: string }>;
 }
