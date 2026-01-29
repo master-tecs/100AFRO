@@ -5,6 +5,7 @@ import './globals.css'
 import ConditionalLayout from './components/ConditionalLayout'
 import { Providers } from './providers'
 import GoogleAnalytics from './components/GoogleAnalytics'
+import CookieConsentBanner from './components/CookieConsentBanner'
 
 export const metadata: Metadata = {
   title: '100AFRO | African Entertainment Hub',
@@ -24,18 +25,7 @@ export default function RootLayout({
       <body className="flex flex-col min-h-screen font-sans bg-gray-900 text-gray-100">
         {gaId && (
           <>
-            <Script
-              strategy="afterInteractive"
-              src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
-            />
-            <Script id="ga4-init" strategy="afterInteractive">
-              {`
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-                gtag('config', '${gaId}', { send_page_view: false });
-              `}
-            </Script>
+            {/* GA4 scripts will be loaded conditionally via client component */}
             <Suspense fallback={null}>
               <GoogleAnalytics gaId={gaId} />
             </Suspense>
@@ -45,6 +35,7 @@ export default function RootLayout({
           <ConditionalLayout>
             {children}
           </ConditionalLayout>
+          <CookieConsentBanner />
         </Providers>
       </body>
     </html>

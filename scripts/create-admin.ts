@@ -1,5 +1,38 @@
 import { prisma } from "../lib/prisma";
-import bcrypt from "bcryptjs";
+
+async function hashPasswordEdge(
+  password: string
+): Promise<{ hash: string; salt: string }> {
+  const saltBytes = crypto.getRandomValues(new Uint8Array(16));
+  const saltBase64 = btoa(String.fromCharCode(...saltBytes));
+
+  const encoder = new TextEncoder();
+  const passwordKey = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"]
+  );
+
+  const hashBuffer = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: saltBytes,
+      iterations: 100000,
+      hash: "SHA-256",
+    },
+    passwordKey,
+    256
+  );
+
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+
+  return { hash: hashHex, salt: saltBase64 };
+}
 
 async function createAdmin() {
   const email = process.env.ADMIN_EMAIL || "admin@100afro.com";
@@ -7,7 +40,7 @@ async function createAdmin() {
   const name = process.env.ADMIN_NAME || "Admin User";
 
   // Hash password
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const { hash: hashedPassword, salt: passwordSalt } = await hashPasswordEdge(password);
 
   try {
     if (!prisma) {
@@ -26,6 +59,7 @@ async function createAdmin() {
         where: { email },
         data: {
           password: hashedPassword,
+          passwordSalt: passwordSalt, // Add this field
           role: "ADMIN",
         },
       });
@@ -42,6 +76,7 @@ async function createAdmin() {
         email,
         name,
         password: hashedPassword,
+        passwordSalt: passwordSalt,
         role: "ADMIN",
       },
     });

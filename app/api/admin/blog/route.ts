@@ -143,6 +143,27 @@ export async function POST(request: NextRequest) {
     const slug = await generateUniqueSlug(baseSlug);
 
     const requestedAuthorId = user.role === "ADMIN" ? (data.authorId || user.id) : user.id;
+    
+    // Validate that both author and creator exist
+    const [authorExists, creatorExists] = await Promise.all([
+      prisma.user.findUnique({ where: { id: requestedAuthorId }, select: { id: true } }),
+      prisma.user.findUnique({ where: { id: user.id }, select: { id: true } }),
+    ]);
+    
+    if (!authorExists) {
+      return NextResponse.json(
+        { error: "Author not found" },
+        { status: 400 }
+      );
+    }
+    
+    if (!creatorExists) {
+      return NextResponse.json(
+        { error: "Creator not found" },
+        { status: 400 }
+      );
+    }
+    
     const now = new Date();
     const publishAtDate = data.publishAt ? new Date(data.publishAt) : null;
 

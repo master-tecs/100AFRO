@@ -58,8 +58,12 @@ export async function GET(_request: NextRequest) {
         totalVotes,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching active poll:", error);
+    // If table doesn't exist, return empty poll instead of error
+    if (error?.code === 'P2021' || error?.message?.includes('does not exist')) {
+      return NextResponse.json({ poll: null });
+    }
     return NextResponse.json({ error: "Failed to fetch poll" }, { status: 500 });
   }
 }

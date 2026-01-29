@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,6 +5,325 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String             @id @default(cuid())
+  name              String?
+  email             String             @unique
+  emailVerified     DateTime?
+  image             String?
+  role              UserRole           @default(USER)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  password          String?
+  passwordSalt      String?
+  comments          Comment[]
+  moderatedComments Comment[]          @relation("CommentModeratedBy")
+  accounts          Account[]
+  blogPostRevisions BlogPostRevision[] @relation("BlogPostRevisionCreatedBy")
+  blogPosts         BlogPost[]
+  createdBlogPosts  BlogPost[]         @relation("BlogPostCreatedBy")
+  updatedBlogPosts  BlogPost[]         @relation("BlogPostUpdatedBy")
+  cookieConsents    CookieConsent[]
+  pollVotes         PollVote[]
+  sessions          Session[]
+
+  @@index([email])
+}
+
+model BlogPost {
+  id              String                 @id @default(cuid())
+  slug            String                 @unique
+  title           String
+  excerpt         String
+  content         String
+  authorId        String
+  category        BlogCategory
+  featured        Boolean                @default(false)
+  imageUrl        String
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  searchVector    String?
+  status          PostStatus             @default(DRAFT)
+  publishAt       DateTime?
+  publishedAt     DateTime?
+  tags            String[]               @default([])
+  metaTitle       String?
+  metaDescription String?
+  canonicalUrl    String?
+  ogImageUrl      String?
+  createdById     String
+  updatedById     String?
+  comments        Comment[]
+  metricsDaily    BlogPostMetricsDaily[]
+  revisions       BlogPostRevision[]
+  author          User                   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdBy       User                   @relation("BlogPostCreatedBy", fields: [createdById], references: [id])
+  updatedBy       User?                  @relation("BlogPostUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([slug])
+  @@index([category])
+  @@index([featured])
+  @@index([createdAt])
+  @@index([authorId])
+  @@index([status, publishAt])
+  @@index([publishedAt])
+  @@index([tags], type: Gin)
+  @@map("blog_posts")
+}
+
+model BlogPostMetricsDaily {
+  id           String   @id @default(cuid())
+  postId       String
+  date         DateTime @db.Date
+  pageviews    Int      @default(0)
+  uniqueViews  Int      @default(0)
+  commentCount Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+  post         BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, date])
+  @@index([date])
+  @@index([postId])
+  @@map("blog_post_metrics_daily")
+}
+
+model BlogPostRevision {
+  id              String       @id @default(cuid())
+  postId          String
+  title           String
+  slug            String
+  excerpt         String
+  content         String
+  category        BlogCategory
+  featured        Boolean
+  imageUrl        String
+  status          PostStatus
+  publishAt       DateTime?
+  publishedAt     DateTime?
+  tags            String[]     @default([])
+  metaTitle       String?
+  metaDescription String?
+  canonicalUrl    String?
+  ogImageUrl      String?
+  createdAt       DateTime     @default(now())
+  createdById     String
+  createdBy       User         @relation("BlogPostRevisionCreatedBy", fields: [createdById], references: [id])
+  post            BlogPost     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([createdAt])
+  @@map("blog_post_revisions")
+}
+
+model Comment {
+  id               String        @id @default(cuid())
+  postId           String
+  authorId         String?
+  author           String
+  content          String
+  likes            Int           @default(0)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  status           CommentStatus @default(PENDING)
+  moderatedAt      DateTime?
+  moderatedById    String?
+  moderationReason String?
+  user             User?         @relation(fields: [authorId], references: [id])
+  moderatedBy      User?         @relation("CommentModeratedBy", fields: [moderatedById], references: [id])
+  post             BlogPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([createdAt])
+  @@index([status])
+}
+
+model Video {
+  id           String        @id @default(cuid())
+  title        String
+  youtubeId    String        @unique
+  thumbnailUrl String?
+  duration     String
+  views        String
+  date         String
+  category     VideoCategory
+  featured     Boolean       @default(false)
+  tags         String[]      @default([])
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([category])
+  @@index([featured])
+  @@index([createdAt])
+}
+
+model ChartEntry {
+  id             String     @id @default(cuid())
+  rank           Int
+  title          String
+  artist         String
+  coverUrl       String
+  trend          ChartTrend
+  lastWeek       Int?
+  peak           Int
+  weeksOnChart   Int
+  type           ChartType
+  previewUrl     String?
+  spotifyLink    String?
+  appleMusicLink String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([type, rank])
+  @@index([createdAt])
+  @@map("chart_entries")
+}
+
+model OnThisDayFact {
+  id         String   @id @default(cuid())
+  month      Int
+  day        Int
+  year       Int?
+  text       String
+  sourceName String
+  sourceUrl  String?
+  externalId String?  @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([month, day])
+  @@index([updatedAt])
+  @@map("on_this_day_facts")
+}
+
+model Artist {
+  id         String   @id @default(cuid())
+  name       String   @unique
+  imageUrl   String
+  genre      String
+  socialLink String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([name])
+}
+
+model TrendingTopic {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  count     String
+  imageUrl  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@map("trending_topics")
+}
+
+model Poll {
+  id        String     @id @default(cuid())
+  question  String
+  options   Json
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  startsAt  DateTime?
+  endsAt    DateTime?
+  votes     PollVote[]
+
+  @@index([active])
+  @@map("polls")
+}
+
+model PollVote {
+  id        String   @id @default(cuid())
+  pollId    String
+  optionId  String
+  userId    String?
+  guestId   String?
+  createdAt DateTime @default(now())
+  poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@unique([pollId, userId])
+  @@unique([pollId, guestId])
+  @@index([pollId])
+  @@index([createdAt])
+  @@map("poll_votes")
+}
+
+model NewsletterSubscriber {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  subscribedAt     DateTime  @default(now())
+  active           Boolean   @default(true)
+  verified         Boolean   @default(false)
+  verifiedAt       DateTime?
+  unsubscribedAt   DateTime?
+  verificationToken String?  @unique
+
+  @@index([email])
+  @@index([active])
+  @@index([verificationToken])
+  @@map("newsletter_subscribers")
+}
+
+model CookieConsent {
+  id                 String   @id @default(cuid())
+  sessionId          String   @unique
+  userId             String?
+  ipAddress          String?
+  userAgent          String?
+  consentPreferences Json
+  consentVersion     String   @default("1.0")
+  consentedAt        DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User?    @relation(fields: [userId], references: [id])
+
+  @@index([sessionId])
+  @@index([userId])
+  @@index([consentedAt])
+  @@map("cookie_consents")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
 }
 
 enum UserRole {
@@ -57,318 +373,3 @@ enum ChartType {
   song
   album
 }
-
-model User {
-  id            String    @id @default(cuid())
-  name           String?
-  email          String    @unique
-  emailVerified  DateTime?
-  image         String?
-  password      String?   // Hashed password for credentials authentication
-  passwordSalt  String?   // Salt for password hashing (Edge-compatible)
-  role          UserRole  @default(USER)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  // Relations
-  blogPosts     BlogPost[]
-  createdBlogPosts   BlogPost[]         @relation("BlogPostCreatedBy")
-  updatedBlogPosts   BlogPost[]         @relation("BlogPostUpdatedBy")
-  blogPostRevisions  BlogPostRevision[] @relation("BlogPostRevisionCreatedBy")
-  comments      Comment[]
-  moderatedComments  Comment[]          @relation("CommentModeratedBy")
-  pollVotes     PollVote[]
-  accounts      Account[]
-  sessions      Session[]
-  
-  @@index([email])
-}
-
-model BlogPost {
-  id          String       @id @default(cuid())
-  slug        String       @unique
-  title       String
-  excerpt     String       @db.Text
-  content     String       @db.Text
-  authorId    String
-  category    BlogCategory
-  featured    Boolean      @default(false)
-  imageUrl    String
-  status      PostStatus   @default(DRAFT)
-  publishAt   DateTime?
-  publishedAt DateTime?
-  tags        String[]     @default([])
-  metaTitle        String?
-  metaDescription  String?
-  canonicalUrl     String?
-  ogImageUrl       String?
-  createdById String
-  updatedById String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  
-  // Full-text search vector (managed via migrations)
-  searchVector String?     @db.Text
-  
-  // Relations
-  author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  createdBy   User         @relation("BlogPostCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy   User?        @relation("BlogPostUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
-  comments    Comment[]
-  revisions   BlogPostRevision[]
-  metricsDaily BlogPostMetricsDaily[]
-  
-  @@index([slug])
-  @@index([category])
-  @@index([featured])
-  @@index([createdAt])
-  @@index([authorId])
-  @@index([status, publishAt])
-  @@index([publishedAt])
-  @@index([tags], type: Gin)
-  @@map("blog_posts")
-}
-
-model BlogPostMetricsDaily {
-  id          String   @id @default(cuid())
-  postId      String
-  date        DateTime @db.Date
-  pageviews   Int      @default(0)
-  uniqueViews Int      @default(0)
-  commentCount Int     @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  post        BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-
-  @@unique([postId, date])
-  @@index([date])
-  @@index([postId])
-  @@map("blog_post_metrics_daily")
-}
-
-model BlogPostRevision {
-  id          String       @id @default(cuid())
-  postId      String
-  title       String
-  slug        String
-  excerpt     String       @db.Text
-  content     String       @db.Text
-  category    BlogCategory
-  featured    Boolean
-  imageUrl    String
-  status      PostStatus
-  publishAt   DateTime?
-  publishedAt DateTime?
-  tags        String[]     @default([])
-  metaTitle        String?
-  metaDescription  String?
-  canonicalUrl     String?
-  ogImageUrl       String?
-  createdAt   DateTime     @default(now())
-  createdById String
-
-  post        BlogPost     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  createdBy   User         @relation("BlogPostRevisionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-
-  @@index([postId])
-  @@index([createdAt])
-  @@map("blog_post_revisions")
-}
-
-model Comment {
-  id        String   @id @default(cuid())
-  postId    String
-  authorId  String?
-  author    String   // Guest author name
-  content   String   @db.Text
-  likes     Int      @default(0)
-  status    CommentStatus @default(PENDING)
-  moderatedAt DateTime?
-  moderatedById String?
-  moderationReason String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  // Relations
-  post      BlogPost? @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user      User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  moderatedBy User?   @relation("CommentModeratedBy", fields: [moderatedById], references: [id], onDelete: SetNull)
-  
-  @@index([postId])
-  @@index([createdAt])
-  @@index([status])
-}
-
-model Video {
-  id          String        @id @default(cuid())
-  title       String
-  youtubeId   String        @unique
-  thumbnailUrl String?
-  duration    String
-  views       String
-  date        String
-  category    VideoCategory
-  featured    Boolean       @default(false)
-  tags        String[]      @default([])
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  
-  @@index([category])
-  @@index([featured])
-  @@index([createdAt])
-}
-
-model ChartEntry {
-  id            String     @id @default(cuid())
-  rank          Int
-  title         String
-  artist        String
-  coverUrl      String
-  trend         ChartTrend
-  lastWeek      Int?
-  peak          Int
-  weeksOnChart  Int
-  type          ChartType
-  previewUrl    String?
-  spotifyLink   String?
-  appleMusicLink String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  
-  @@index([type, rank])
-  @@index([createdAt])
-  @@map("chart_entries")
-}
-
-model OnThisDayFact {
-  id         String   @id @default(cuid())
-  month      Int
-  day        Int
-  year       Int?
-  text       String   @db.Text
-  sourceName String
-  sourceUrl  String?
-  externalId String?  @unique
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@index([month, day])
-  @@index([updatedAt])
-  @@map("on_this_day_facts")
-}
-
-model Artist {
-  id         String   @id @default(cuid())
-  name       String   @unique
-  imageUrl   String
-  genre      String
-  socialLink String?
-  createdAt  DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  @@index([name])
-}
-
-model TrendingTopic {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  count     String
-  imageUrl  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  @@index([name])
-  @@map("trending_topics")
-}
-
-model Poll {
-  id        String   @id @default(cuid())
-  question  String   @db.Text
-  options   Json     // Array of { id, text, votes }
-  active    Boolean  @default(true)
-  startsAt  DateTime?
-  endsAt    DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  votes     PollVote[]
-  
-  @@index([active])
-  @@map("polls")
-}
-
-model PollVote {
-  id        String   @id @default(cuid())
-  pollId    String
-  optionId  String
-  userId    String?
-  guestId   String?
-  createdAt DateTime @default(now())
-
-  poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  @@unique([pollId, userId])
-  @@unique([pollId, guestId])
-  @@index([pollId])
-  @@index([createdAt])
-  @@map("poll_votes")
-}
-
-model NewsletterSubscriber {
-  id               String    @id @default(cuid())
-  email            String    @unique
-  subscribedAt     DateTime  @default(now())
-  active           Boolean   @default(true)
-  verified         Boolean   @default(false)
-  verificationToken String?  @unique
-  verifiedAt       DateTime?
-  unsubscribedAt   DateTime?
-  
-  @@index([email])
-  @@index([active])
-  @@index([verified])
-  @@index([verificationToken])
-  @@map("newsletter_subscribers")
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?  @db.Text
-  access_token      String?  @db.Text
-  expires_at       Int?
-  token_type        String?
-  scope             String?
-  id_token          String?  @db.Text
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@map("accounts")
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("sessions")
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-  @@map("verification_tokens")
-}
-
