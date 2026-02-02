@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/use-auth';
 import { Menu, X, Youtube, Search, ArrowRight, Shield } from 'lucide-react';
@@ -59,7 +60,17 @@ const Header: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             {/* Logo */}
-            <Link href="/" className="flex items-center group relative z-50">
+            <Link href="/" className="flex items-center gap-3 group relative z-50">
+              <div className="relative h-12 w-12 rounded-full overflow-hidden flex-shrink-0">
+                <Image
+                  src="/logo.PNG"
+                  alt="100AFRO - African Entertainment Hub"
+                  width={48}
+                  height={48}
+                  className="h-12 w-12 object-cover rounded-full transition-opacity duration-300 group-hover:opacity-80"
+                  priority
+                />
+              </div>
               <div className="relative">
                 <span className="font-display font-bold text-3xl text-white tracking-tighter">
                   100<span className="text-afro-primary">AFRO</span>

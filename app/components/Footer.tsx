@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Youtube, Instagram, Twitter, Mail, Facebook, Linkedin } from 'lucide-react';
 
 const Footer: React.FC = () => {
@@ -10,7 +11,16 @@ const Footer: React.FC = () => {
           
           {/* Brand Column (2 cols wide on LG) */}
           <div className="col-span-1 md:col-span-2 lg:col-span-2">
-            <Link href="/" className="inline-block mb-6">
+            <Link href="/" className="inline-flex items-center gap-3 mb-6">
+              <div className="relative h-12 w-12 rounded-full overflow-hidden flex-shrink-0">
+                <Image
+                  src="/logo.PNG"
+                  alt="100AFRO - African Entertainment Hub"
+                  width={48}
+                  height={48}
+                  className="h-12 w-12 object-cover rounded-full"
+                />
+              </div>
               <span className="font-display font-bold text-3xl text-white tracking-tighter">
                 100<span className="text-afro-primary">AFRO</span>
               </span>
