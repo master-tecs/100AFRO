@@ -880,7 +880,7 @@ export default function AdminDashboard() {
 
           {/* Content based on active tab */}
           {activeTab === "posts" && (
-            <>
+            <div>
               {/* Action Bar */}
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 lg:mb-8 gap-4">
                 <h2 className="text-xl lg:text-2xl font-display font-bold text-white">
@@ -1186,7 +1186,7 @@ export default function AdminDashboard() {
                   <div className="text-gray-500">
                     Page <span className="text-gray-200 font-bold">{page}</span> of{" "}
                     <span className="text-gray-200 font-bold">{totalPages}</span>
-                  </div>
+              </div>
                   <div className="flex items-center gap-2">
                     <button
                       disabled={page <= 1}
@@ -1205,7 +1205,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </div>
-            </>
+            </div>
           )}
 
           {/* Comments Moderation Tab (Admin) */}
@@ -1558,29 +1558,51 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Poll Modal */}
-          {isPollModalOpen && user?.role === "ADMIN" && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-              <div className="w-full max-w-2xl bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
-                <div className="p-5 border-b border-gray-800 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-white font-display font-bold text-xl">
-                      {editingPoll ? "Edit Poll" : "New Poll"}
-                    </h3>
-                    <p className="text-gray-500 text-sm mt-1">This powers the homepage Poll of the Week.</p>
-                  </div>
-                  <button
-                    onClick={() => setIsPollModalOpen(false)}
-                    className="text-gray-400 hover:text-white"
-                    aria-label="Close"
-                  >
-                    <X size={22} />
-                  </button>
-                </div>
+          {/* Videos Tab */}
+          {activeTab === "videos" && (
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 lg:p-8">
+              <h2 className="text-2xl font-display font-bold text-white mb-6">
+                Video Management
+              </h2>
+              <div className="text-center py-12">
+                <VideoIcon className="mx-auto text-gray-600 mb-4" size={48} />
+                <p className="text-gray-400 font-medium">
+                  Video management coming soon...
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
 
-                <div className="p-5 space-y-4">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-300 mb-2">Question</label>
+      {/* Poll Modal */}
+      {isPollModalOpen && user?.role === "ADMIN" && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-black/60 backdrop-blur-sm safe-area-inset-top safe-area-inset-bottom">
+          <div className="flex-1 flex flex-col min-h-0 w-full max-w-2xl mx-auto bg-gray-900 border-x border-gray-800 shadow-2xl lg:rounded-2xl lg:my-4 lg:border lg:max-h-[95vh]">
+            {/* Sticky Header */}
+            <div className="sticky top-0 bg-gray-900 border-b border-gray-800 p-4 lg:p-5 z-10 flex-shrink-0 safe-area-inset-top">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-white font-display font-bold text-lg lg:text-xl">
+                    {editingPoll ? "Edit Poll" : "New Poll"}
+                  </h3>
+                  <p className="text-gray-500 text-xs lg:text-sm mt-1">This powers the homepage Poll of the Week.</p>
+                </div>
+                <button
+                  onClick={() => setIsPollModalOpen(false)}
+                  className="text-gray-400 hover:text-white transition-colors p-2 -mr-2 flex-shrink-0 touch-manipulation"
+                  aria-label="Close"
+                  type="button"
+                >
+                  <X size={22} />
+                </button>
+              </div>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-4 lg:p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-300 mb-2">Question</label>
                     <input
                       value={pollDraft.question}
                       onChange={(e) => setPollDraft((p) => ({ ...p, question: e.target.value }))}
@@ -1696,54 +1718,43 @@ export default function AdminDashboard() {
                   )}
                 </div>
 
-                <div className="p-5 border-t border-gray-800 flex items-center justify-end gap-3">
-                  <button
-                    onClick={() => setIsPollModalOpen(false)}
-                    className="px-4 py-2.5 rounded-xl bg-gray-800 text-gray-200 hover:bg-gray-700 font-bold"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={savePoll}
-                    disabled={pollSaving}
-                    className="px-5 py-2.5 rounded-xl bg-afro-primary text-black font-bold hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    <Save size={18} />
-                    {pollSaving ? "Saving..." : "Save Poll"}
-                  </button>
-                </div>
+            {/* Sticky Footer with Buttons */}
+            <div className="sticky bottom-0 bg-gray-900 border-t border-gray-800 p-4 lg:p-5 z-10 flex-shrink-0 safe-area-inset-bottom">
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  onClick={() => setIsPollModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl bg-gray-800 text-gray-200 hover:bg-gray-700 active:bg-gray-700 font-bold touch-manipulation"
+                  type="button"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={savePoll}
+                  disabled={pollSaving}
+                  className="px-5 py-2.5 rounded-xl bg-afro-primary text-black font-bold hover:bg-white active:bg-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 touch-manipulation"
+                  type="button"
+                >
+                  <Save size={18} />
+                  {pollSaving ? "Saving..." : "Save Poll"}
+                </button>
               </div>
             </div>
-          )}
-
-          {/* Videos Tab */}
-          {activeTab === "videos" && (
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 lg:p-8">
-              <h2 className="text-2xl font-display font-bold text-white mb-6">
-                Video Management
-              </h2>
-              <div className="text-center py-12">
-                <VideoIcon className="mx-auto text-gray-600 mb-4" size={48} />
-                <p className="text-gray-400 font-medium">
-                  Video management coming soon...
-                </p>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
-      </main>
+      )}
 
       {/* New/Edit Post Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto">
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl lg:rounded-3xl w-full max-w-3xl max-h-[95vh] overflow-y-auto shadow-2xl relative animate-in zoom-in-95 duration-300 my-4">
-            <div className="sticky top-0 bg-gray-900 border-b border-gray-800 p-4 lg:p-6 z-10">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h2 className="text-2xl lg:text-3xl font-display font-bold text-white">
+        <div className="fixed inset-0 z-50 flex flex-col bg-black/80 backdrop-blur-md animate-in fade-in duration-300 safe-area-inset-top safe-area-inset-bottom">
+          <div className="flex-1 flex flex-col min-h-0 w-full max-w-3xl mx-auto bg-gray-900 border-x border-gray-700 shadow-2xl animate-in zoom-in-95 duration-300 lg:rounded-2xl lg:my-4 lg:border lg:max-h-[95vh]">
+            {/* Sticky Header */}
+            <div className="sticky top-0 bg-gray-900 border-b border-gray-800 p-4 lg:p-6 z-10 flex-shrink-0 safe-area-inset-top">
+              <div className="flex justify-between items-start gap-4">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-xl lg:text-3xl font-display font-bold text-white leading-tight">
                     {isEditMode ? "Edit Story" : "Create New Story"}
                   </h2>
-                  <p className="text-gray-500 text-sm mt-1">
+                  <p className="text-gray-500 text-xs lg:text-sm mt-1">
                     Crafting the next big trend on 100AFRO.
                   </p>
                 </div>
@@ -1754,15 +1765,17 @@ export default function AdminDashboard() {
                     setEditingPost(null);
                     setImagePreview(null);
                   }}
-                  className="text-gray-500 hover:text-white transition-colors p-2 -mr-2"
+                  className="text-gray-500 hover:text-white transition-colors p-2 -mr-2 flex-shrink-0 touch-manipulation"
+                  type="button"
                 >
                   <X size={24} />
                 </button>
               </div>
             </div>
 
-            <div className="p-4 lg:p-8">
-              <form onSubmit={handleCreatePost} className="space-y-6">
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-4 lg:p-8">
+              <form id="post-form" onSubmit={handleCreatePost} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
                   <div className="md:col-span-2">
                     <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-widest">
@@ -2093,7 +2106,12 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-800">
+              </form>
+            </div>
+
+            {/* Sticky Footer with Buttons */}
+            <div className="sticky bottom-0 bg-gray-900 border-t border-gray-800 p-4 lg:p-6 z-10 flex-shrink-0 safe-area-inset-bottom">
+              <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     type="button"
                     onClick={() => {
@@ -2102,13 +2120,14 @@ export default function AdminDashboard() {
                       setEditingPost(null);
                       setImagePreview(null);
                     }}
-                    className="flex-1 border border-gray-700 text-gray-400 hover:bg-gray-800 font-bold py-3 lg:py-4 rounded-xl transition-all text-sm lg:text-base"
+                  className="flex-1 border border-gray-700 text-gray-400 hover:bg-gray-800 active:bg-gray-800 font-bold py-3 lg:py-4 rounded-xl transition-all text-sm lg:text-base touch-manipulation"
                   >
                     Discard
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-afro-primary text-black font-bold py-3 lg:py-4 rounded-xl hover:bg-white transition-all shadow-xl shadow-afro-primary/20 flex items-center justify-center gap-2 text-sm lg:text-base"
+                  form="post-form"
+                  className="flex-1 bg-afro-primary text-black font-bold py-3 lg:py-4 rounded-xl hover:bg-white active:bg-white transition-all shadow-xl shadow-afro-primary/20 flex items-center justify-center gap-2 text-sm lg:text-base touch-manipulation"
                   >
                     {isEditMode ? (
                       <>
@@ -2116,12 +2135,11 @@ export default function AdminDashboard() {
                       </>
                     ) : (
                       <>
-                        <Plus size={18} /> Save Story
+                      <Plus size={18} /> Save Story
                       </>
                     )}
                   </button>
                 </div>
-              </form>
             </div>
           </div>
         </div>
@@ -2129,15 +2147,16 @@ export default function AdminDashboard() {
 
       {/* Revisions Modal */}
       {isRevisionsOpen && revisionsPost && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl relative my-4">
-            <div className="sticky top-0 bg-gray-900 border-b border-gray-800 p-4 lg:p-6 z-10">
-              <div className="flex justify-between items-start">
-                <div>
+        <div className="fixed inset-0 z-50 flex flex-col bg-black/80 backdrop-blur-md safe-area-inset-top safe-area-inset-bottom">
+          <div className="flex-1 flex flex-col min-h-0 w-full max-w-2xl mx-auto bg-gray-900 border-x border-gray-700 shadow-2xl lg:rounded-2xl lg:my-4 lg:border lg:max-h-[90vh]">
+            {/* Sticky Header */}
+            <div className="sticky top-0 bg-gray-900 border-b border-gray-800 p-4 lg:p-6 z-10 flex-shrink-0 safe-area-inset-top">
+              <div className="flex justify-between items-start gap-4">
+                <div className="flex-1 min-w-0">
                   <h2 className="text-xl lg:text-2xl font-display font-bold text-white">
                     Revisions
                   </h2>
-                  <p className="text-gray-500 text-sm mt-1">
+                  <p className="text-gray-500 text-xs lg:text-sm mt-1 truncate">
                     {revisionsPost.title}
                   </p>
                 </div>
@@ -2147,14 +2166,16 @@ export default function AdminDashboard() {
                     setRevisionsPost(null);
                     setRevisions([]);
                   }}
-                  className="text-gray-500 hover:text-white transition-colors p-2 -mr-2"
+                  className="text-gray-500 hover:text-white transition-colors p-2 -mr-2 flex-shrink-0 touch-manipulation"
+                  type="button"
                 >
                   <X size={24} />
                 </button>
               </div>
             </div>
 
-            <div className="p-4 lg:p-6">
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-4 lg:p-6">
               {revisionsLoading ? (
                 <div className="py-10 text-center text-gray-400">
                   Loading revisions...
