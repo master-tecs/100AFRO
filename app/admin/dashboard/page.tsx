@@ -886,8 +886,8 @@ export default function AdminDashboard() {
                 <h2 className="text-xl lg:text-2xl font-display font-bold text-white">
                   Editorial Board
                 </h2>
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                  <div className="relative flex-grow sm:flex-grow-0 sm:w-64">
+                <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
+                  <div className="relative flex-grow sm:flex-grow-0 sm:w-64 min-w-0">
                     <Search
                       className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
                       size={18}
@@ -906,7 +906,7 @@ export default function AdminDashboard() {
                       setStatusFilter(e.target.value as any);
                       setPage(1);
                     }}
-                    className="bg-gray-900 border border-gray-800 rounded-xl py-2 px-3 text-white text-sm focus:outline-none focus:border-afro-primary"
+                    className="bg-gray-900 border border-gray-800 rounded-xl py-2 px-3 text-white text-sm focus:outline-none focus:border-afro-primary flex-shrink-0"
                     title="Filter by status"
                   >
                     <option value="ALL">All</option>
@@ -916,7 +916,9 @@ export default function AdminDashboard() {
                     <option value="ARCHIVED">Archived</option>
                   </select>
                   <button
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
                       setIsEditMode(false);
                       setEditingPost(null);
                       setImagePreview(null);
@@ -937,7 +939,11 @@ export default function AdminDashboard() {
                       });
                       setIsModalOpen(true);
                     }}
-                    className="bg-afro-primary hover:bg-white text-black font-bold px-4 lg:px-6 py-2.5 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap shadow-lg shadow-afro-primary/10 text-sm lg:text-base"
+                    onTouchStart={(e) => {
+                      e.stopPropagation();
+                    }}
+                    className="bg-afro-primary hover:bg-white active:bg-white text-black font-bold px-4 lg:px-6 py-2.5 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap shadow-lg shadow-afro-primary/10 text-sm lg:text-base cursor-pointer touch-manipulation select-none relative z-10"
+                    type="button"
                   >
                     <Plus size={18} className="lg:w-5 lg:h-5" />{" "}
                     <span className="hidden sm:inline">New Article</span>
