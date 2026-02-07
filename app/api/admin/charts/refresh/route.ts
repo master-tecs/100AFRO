@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUser } from "@/lib/get-user";
 import { ChartTrend, ChartType } from "@prisma/client";
-import { getNewReleases, getTopSongs } from "@/lib/spotify";
+import { getNewReleases, getTopSongs } from "@/lib/itunes";
 import { rateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -42,10 +42,10 @@ export async function POST(request: NextRequest) {
 
     // Store country/source in existing optional columns to avoid schema change:
     // - previewUrl: use as "country" marker (e.g., "NG")
-    // - appleMusicLink: use as "source" marker (e.g., "spotify")
+    // - appleMusicLink: use as "source" marker (e.g., "itunes")
     // This preserves compatibility without migrations; if you want a cleaner schema,
     // we can add explicit fields later.
-    const source = "spotify";
+    const source = "itunes";
 
     await prisma.$transaction(async (tx) => {
       // Clear previous synced entries for this country/source
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
             weeksOnChart: 1,
             type: ChartType.song,
             previewUrl: country,
-            spotifyLink: s.spotifyLink,
+            spotifyLink: s.appleMusicLink, // Store Apple Music link in spotifyLink field (for compatibility)
             appleMusicLink: source,
           })),
         });
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
             weeksOnChart: 1,
             type: ChartType.album,
             previewUrl: country,
-            spotifyLink: a.spotifyLink,
+            spotifyLink: a.appleMusicLink, // Store Apple Music link in spotifyLink field (for compatibility)
             appleMusicLink: source,
           })),
         });

@@ -76,7 +76,7 @@ export default function AboutPage() {
                   <h3 className="text-lg font-bold text-white">Music Charts</h3>
                 </div>
                 <p className="text-gray-300 text-sm">
-                  Live music charts powered by Spotify, tracking the hottest tracks across Africa and the diaspora.
+                  Live music charts powered by Apple Music, tracking the hottest tracks across Africa and the diaspora.
                 </p>
               </div>
               <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">

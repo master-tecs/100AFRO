@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getNewReleases, getTopSongs } from "@/lib/spotify";
+import { getNewReleases, getTopSongs } from "@/lib/itunes";
 
 export const runtime = "nodejs";
 
@@ -19,14 +19,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       country,
-      source: "spotify",
-      attribution: "Charts data from Spotify",
+      source: "itunes",
+      attribution: "Charts data from Apple Music",
       songs,
       albums,
       cachedTtlMinutes: 15,
     });
   } catch (error) {
-    console.error("Error fetching Spotify live charts:", error);
+    console.error("Error fetching iTunes live charts:", error);
     return NextResponse.json(
       { error: "Failed to fetch live charts" },
       { status: 500 }

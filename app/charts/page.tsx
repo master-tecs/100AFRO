@@ -19,9 +19,9 @@ export default async function ChartsPage({ searchParams }: ChartsPageProps) {
   const sp = (await searchParams) || {};
   const country = parseCountry(sp.country);
 
-  // Spotify live first (cached), then DB fallback.
-  let spotifySongs: any[] = [];
-  let spotifyAlbums: any[] = [];
+  // iTunes/Apple Music live first (cached), then DB fallback.
+  let itunesSongs: any[] = [];
+  let itunesAlbums: any[] = [];
   let usedFallback = false;
 
   // Handle missing DATABASE_URL or Prisma
@@ -37,8 +37,8 @@ export default async function ChartsPage({ searchParams }: ChartsPageProps) {
     });
     if (res.ok) {
       const data = await res.json();
-      spotifySongs = data.songs || [];
-      spotifyAlbums = data.albums || [];
+      itunesSongs = data.songs || [];
+      itunesAlbums = data.albums || [];
     } else {
       usedFallback = true;
     }
@@ -51,7 +51,7 @@ export default async function ChartsPage({ searchParams }: ChartsPageProps) {
       if (process.env.DATABASE_URL && prisma !== null) {
         charts = await prisma.chartEntry.findMany({
           where: {
-            appleMusicLink: 'spotify',
+            appleMusicLink: 'itunes',
             previewUrl: country,
           },
           orderBy: [{ type: 'asc' }, { rank: 'asc' }],
@@ -63,8 +63,8 @@ export default async function ChartsPage({ searchParams }: ChartsPageProps) {
   }
 
   const songs =
-    spotifySongs.length > 0
-      ? spotifySongs.map((s: any) => ({
+    itunesSongs.length > 0
+      ? itunesSongs.map((s: any) => ({
           id: `${country}-song-${s.rank}`,
           rank: s.rank,
           title: s.title,
@@ -72,13 +72,13 @@ export default async function ChartsPage({ searchParams }: ChartsPageProps) {
           coverUrl: s.coverUrl,
           trend: 'same',
           lastWeek: null,
-          spotifyLink: s.spotifyLink,
+          spotifyLink: s.appleMusicLink || s.spotifyLink,
         }))
       : charts.filter((c) => c.type === ChartType.song);
 
   const albums =
-    spotifyAlbums.length > 0
-      ? spotifyAlbums.map((a: any) => ({
+    itunesAlbums.length > 0
+      ? itunesAlbums.map((a: any) => ({
           id: `${country}-album-${a.rank}`,
           rank: a.rank,
           title: a.title,
@@ -86,7 +86,7 @@ export default async function ChartsPage({ searchParams }: ChartsPageProps) {
           coverUrl: a.coverUrl,
           trend: 'new',
           lastWeek: null,
-          spotifyLink: a.spotifyLink,
+          spotifyLink: a.appleMusicLink || a.spotifyLink,
           releaseDate: a.releaseDate,
         }))
       : charts.filter((c) => c.type === ChartType.album);
@@ -102,7 +102,7 @@ export default async function ChartsPage({ searchParams }: ChartsPageProps) {
           </div>
           <div className="text-center py-20">
             <p className="text-gray-400 text-xl">
-              Live charts will be available once Spotify credentials are configured.
+              Live charts will be available once configured.
             </p>
           </div>
         </div>
@@ -130,9 +130,9 @@ export default async function ChartsPage({ searchParams }: ChartsPageProps) {
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div>
               <h1 className="text-4xl md:text-5xl font-display font-bold text-white mb-4">Top Charts</h1>
-              <p className="text-gray-400 text-lg">Live charts powered by Spotify (metadata only)</p>
+              <p className="text-gray-400 text-lg">Live charts powered by Apple Music (metadata only)</p>
               <p className="text-xs text-gray-500 mt-2">
-                Attribution: Charts data from Spotify. We display titles, artists, artwork and links.
+                Attribution: Charts data from Apple Music. We display titles, artists, artwork and links.
               </p>
             </div>
             <div className="flex items-center gap-2">
