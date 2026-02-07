@@ -33,7 +33,7 @@ type iTunesSongItem = {
   previewUrl?: string;
 };
 
-type iTunesAlbumItem = {
+type iTunesRSSAlbumItem = {
   artistName: string;
   name: string;
   artworkUrl100: string;
@@ -43,7 +43,7 @@ type iTunesAlbumItem = {
 
 type iTunesRSSResponse = {
   feed: {
-    results: Array<iTunesSongItem | iTunesAlbumItem>;
+    results: Array<iTunesSongItem | iTunesRSSAlbumItem>;
   };
 };
 
@@ -137,7 +137,7 @@ export async function getNewReleases(
         artist: album.artistName,
         coverUrl: album.artworkUrl100,
         appleMusicLink: album.url,
-        releaseDate: (album as iTunesAlbumItem).releaseDate ?? null,
+        releaseDate: (album as iTunesRSSAlbumItem).releaseDate ?? null,
       }))
       .filter((x) => x.title && x.artist && x.coverUrl && x.appleMusicLink);
 

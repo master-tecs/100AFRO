@@ -152,14 +152,19 @@ export async function fetchChannelVideos(
     }
 
     const detailsData = await detailsResponse.json();
-    const detailsMap = new Map(
-      detailsData.items.map((item: any) => [item.id, item])
+    type VideoDetails = {
+      id: string;
+      contentDetails?: { duration?: string };
+      statistics?: { viewCount?: string };
+    };
+    const detailsMap = new Map<string, VideoDetails>(
+      (detailsData.items || []).map((item: VideoDetails) => [item.id, item])
     );
 
     // Map to our format
     const videos: YouTubeVideo[] = data.items.map((item: any) => {
       const videoId = item.id.videoId;
-      const details = detailsMap.get(videoId);
+      const details: VideoDetails | undefined = detailsMap.get(videoId);
 
       return {
         id: videoId,
