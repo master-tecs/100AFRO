@@ -6,6 +6,7 @@ import BlogPostCard from './components/BlogPostCard';
 import VideoCard from './components/VideoCard';
 import NewsletterForm from './components/NewsletterForm';
 import PollWidget from './components/PollWidget';
+import TruncatedTitle from './components/TruncatedTitle';
 
 async function getHomeData() {
   // Initialize with empty data
@@ -163,9 +164,14 @@ export default async function Home() {
                   <span className="inline-block px-3 py-1 bg-afro-primary text-black text-xs font-bold uppercase tracking-wider rounded-sm mb-3">
                     Cover Story
                   </span>
-                  <h1 className="text-3xl md:text-5xl lg:text-6xl font-display font-bold text-white mb-4 leading-tight group-hover:text-afro-primary transition-colors drop-shadow-lg">
-                    {featuredPost.title}
-                  </h1>
+                  <div className="mb-4">
+                    <TruncatedTitle
+                      title={featuredPost.title}
+                      as="h1"
+                      className="text-2xl md:text-3xl lg:text-4xl font-display font-bold text-white leading-tight group-hover:text-afro-primary transition-colors drop-shadow-lg"
+                      maxLines={3}
+                    />
+                  </div>
                   <p className="text-gray-200 text-lg line-clamp-2 mb-4 hidden md:block drop-shadow-md">
                     {featuredPost.excerpt}
                   </p>
@@ -194,9 +200,12 @@ export default async function Home() {
                     <span className="bg-black/50 backdrop-blur-sm text-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider mb-2 inline-block rounded">
                       {post.category}
                     </span>
-                    <h3 className="text-xl font-bold text-white leading-tight group-hover:underline decoration-2 decoration-afro-primary underline-offset-4 drop-shadow-lg">
-                      {post.title}
-                    </h3>
+                    <TruncatedTitle
+                      title={post.title}
+                      as="h3"
+                      className="text-xl font-bold text-white leading-tight group-hover:underline decoration-2 decoration-afro-primary underline-offset-4 drop-shadow-lg"
+                      linkHref={`/blog/${post.slug}`}
+                    />
                   </div>
                 </Link>
               </div>
@@ -242,7 +251,12 @@ export default async function Home() {
                        <img src={post.imageUrl} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 grayscale group-hover:grayscale-0" />
                        <div className="absolute top-2 left-2 bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded uppercase">Analysis</div>
                     </div>
-                    <h3 className="text-lg font-bold text-white mb-2 group-hover:text-blue-400 transition-colors leading-snug">{post.title}</h3>
+                    <TruncatedTitle
+                      title={post.title}
+                      as="h3"
+                      className="text-lg font-bold text-white mb-2 group-hover:text-blue-400 transition-colors leading-snug"
+                      linkHref={`/blog/${post.slug}`}
+                    />
                     <p className="text-sm text-gray-400 line-clamp-2">{post.excerpt}</p>
                   </Link>
                 ))}

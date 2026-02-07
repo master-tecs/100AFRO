@@ -19,7 +19,7 @@ import {
   Check,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { escapeHtml } from "@/lib/utils";
+import { sanitizeBlogContent } from "@/lib/sanitize-html";
 import BlogPostCard from "../../components/BlogPostCard";
 import CommentsSection from "../../components/CommentsSection";
 import NewsletterForm from "../../components/NewsletterForm";
@@ -251,8 +251,9 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
               </p>
 
               <div
+                className="rich-content"
                 dangerouslySetInnerHTML={{
-                  __html: escapeHtml(post.content).replace(/\n/g, "<br />"),
+                  __html: sanitizeBlogContent(post.content),
                 }}
               />
             </div>

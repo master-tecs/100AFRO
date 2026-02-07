@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { BlogCategory } from '@prisma/client';
+import TruncatedTitle from './TruncatedTitle';
 
 interface BlogPost {
   id: string;
@@ -49,10 +50,13 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({ post, featured = false }) =
           <span>•</span>
           <span>{post.author.name || 'Author'}</span>
         </div>
-        <h3 className="text-xl font-bold text-white mb-3 leading-tight group-hover:text-afro-primary transition-colors">
-          <Link href={`/blog/${post.slug}`}>
-            {post.title}
-          </Link>
+        <h3 className="mb-3">
+          <TruncatedTitle
+            title={post.title}
+            as="span"
+            className="text-xl font-bold text-white leading-tight group-hover:text-afro-primary transition-colors"
+            linkHref={`/blog/${post.slug}`}
+          />
         </h3>
         <p className="text-gray-400 text-sm mb-4 flex-grow line-clamp-3">
           {post.excerpt}

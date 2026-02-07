@@ -47,6 +47,81 @@ body {
     }
   }
 
+  /* Rich Content Styles */
+  .rich-content {
+    @apply text-gray-200;
+  }
+
+  .rich-content img {
+    @apply max-w-full h-auto rounded-xl my-6 mx-auto;
+    display: block;
+  }
+
+  .rich-content .youtube-embed-wrapper {
+    @apply my-8 mx-auto max-w-4xl;
+  }
+
+  .rich-content .youtube-embed-container {
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+    overflow: hidden;
+    max-width: 100%;
+    border-radius: 0.75rem;
+    overflow: hidden;
+  }
+
+  .rich-content .youtube-embed-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  .rich-content p {
+    @apply mb-4 leading-relaxed;
+  }
+
+  .rich-content h1,
+  .rich-content h2,
+  .rich-content h3,
+  .rich-content h4,
+  .rich-content h5,
+  .rich-content h6 {
+    @apply font-display font-bold text-white mt-8 mb-4;
+  }
+
+  .rich-content h1 {
+    @apply text-4xl;
+  }
+
+  .rich-content h2 {
+    @apply text-3xl;
+  }
+
+  .rich-content h3 {
+    @apply text-2xl;
+  }
+
+  .rich-content ul,
+  .rich-content ol {
+    @apply mb-4 ml-6;
+  }
+
+  .rich-content li {
+    @apply mb-2;
+  }
+
+  .rich-content blockquote {
+    @apply border-l-4 border-afro-primary bg-gray-800/50 py-2 px-6 my-6 italic;
+  }
+
+  .rich-content a {
+    @apply text-afro-primary hover:underline;
+  }
+
   @keyframes bounce-in {
     0% {
       opacity: 0;

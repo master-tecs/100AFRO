@@ -26,7 +26,9 @@ import {
   Clock,
   Calendar,
   Save,
+  AlertTriangle,
 } from "lucide-react";
+import TruncatedTitle from "../../components/TruncatedTitle";
 
 type BlogCategory = "Music" | "Culture" | "Lifestyle" | "News" | "Industry";
 type PostStatus = "DRAFT" | "IN_REVIEW" | "PUBLISHED" | "ARCHIVED";
@@ -71,9 +73,6 @@ export default function AdminDashboard() {
   );
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<
@@ -93,9 +92,9 @@ export default function AdminDashboard() {
   const [commentsTotalPages, setCommentsTotalPages] = useState(1);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [moderationQueue, setModerationQueue] = useState<any[]>([]);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [postToDelete, setPostToDelete] = useState<BlogPost | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Polls (Admin)
   const [pollsLoading, setPollsLoading] = useState(false);
@@ -123,22 +122,6 @@ export default function AdminDashboard() {
   const [pollResultsLoading, setPollResultsLoading] = useState(false);
   const [pollResultsForId, setPollResultsForId] = useState<string | null>(null);
 
-  // New Post Form State
-  const [newPost, setNewPost] = useState({
-    title: "",
-    category: "Music" as BlogCategory,
-    excerpt: "",
-    content: "",
-    imageUrl: "https://picsum.photos/seed/new/800/600",
-    featured: false,
-    status: "DRAFT" as PostStatus,
-    publishAt: "",
-    tags: "",
-    metaTitle: "",
-    metaDescription: "",
-    canonicalUrl: "",
-    ogImageUrl: "",
-  });
 
   useEffect(() => {
     if (!loading && !user) {
@@ -457,167 +440,52 @@ export default function AdminDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
-  const normalizePostPayload = () => {
-    const tags = (newPost.tags || "")
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
-    const publishAt = newPost.publishAt
-      ? new Date(newPost.publishAt).toISOString()
-      : null;
-    const payload: any = {
-      title: newPost.title,
-      excerpt: newPost.excerpt,
-      content: newPost.content,
-      category: newPost.category,
-      featured: newPost.featured,
-      imageUrl: newPost.imageUrl,
-      status: newPost.status,
-      publishAt,
-      tags,
-      metaTitle: newPost.metaTitle || null,
-      metaDescription: newPost.metaDescription || null,
-      canonicalUrl: newPost.canonicalUrl || null,
-      ogImageUrl: newPost.ogImageUrl || null,
-    };
-    return payload;
-  };
-
-  const handleCreatePost = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const url =
-        isEditMode && editingPost
-          ? `/api/admin/blog/${editingPost.id}`
-          : "/api/admin/blog";
-
-      const response = await fetch(url, {
-        method: isEditMode ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(normalizePostPayload()),
-      });
-
-      if (response.ok) {
-        const post = await response.json();
-        if (isEditMode) {
-          setPosts(posts.map((p) => (p.id === editingPost!.id ? post : p)));
-          showToast("success", "Post updated successfully.");
-        } else {
-          setPosts([post, ...posts]);
-          showToast("success", "Draft saved. You can schedule or publish when ready.");
-        }
-        setIsModalOpen(false);
-        setIsEditMode(false);
-        setEditingPost(null);
-        setNewPost({
-          title: "",
-          category: "Music",
-          excerpt: "",
-          content: "",
-          imageUrl: "https://picsum.photos/seed/new/800/600",
-          featured: false,
-          status: "DRAFT",
-          publishAt: "",
-          tags: "",
-          metaTitle: "",
-          metaDescription: "",
-          canonicalUrl: "",
-          ogImageUrl: "",
-        });
-      } else {
-        const error = await response.json();
-        showToast(
-          "error",
-          error.error || `Failed to ${isEditMode ? "update" : "create"} post`
-        );
-      }
-    } catch (error) {
-      console.error(
-        `Error ${isEditMode ? "updating" : "creating"} post:`,
-        error
-      );
-      showToast("error", `Failed to ${isEditMode ? "update" : "create"} post`);
-    }
-  };
 
   const handleEdit = (post: BlogPost) => {
-    setEditingPost(post);
-    setImagePreview(post.imageUrl);
-    setNewPost({
-      title: post.title,
-      category: post.category,
-      excerpt: post.excerpt,
-      content: post.content || post.excerpt,
-      imageUrl: post.imageUrl,
-      featured: post.featured,
-      status: (post.status as PostStatus) || "DRAFT",
-      publishAt: post.publishAt ? new Date(post.publishAt as any).toISOString().slice(0, 16) : "",
-      tags: (post.tags || []).join(", "),
-      metaTitle: (post as any).metaTitle || "",
-      metaDescription: (post as any).metaDescription || "",
-      canonicalUrl: (post as any).canonicalUrl || "",
-      ogImageUrl: (post as any).ogImageUrl || "",
-    });
-    setIsEditMode(true);
-    setIsModalOpen(true);
+    router.push(`/admin/posts/${post.id}/edit`);
   };
 
-  const deletePost = async (id: string) => {
-    if (!window.confirm("Archive this post? You can restore later from revisions.")) {
-      return;
-    }
+  const openDeleteConfirm = (post: BlogPost) => {
+    setPostToDelete(post);
+    setDeleteConfirmOpen(true);
+  };
 
+  const closeDeleteConfirm = () => {
+    if (!deleting) {
+      setDeleteConfirmOpen(false);
+      setPostToDelete(null);
+    }
+  };
+
+  const deletePost = async () => {
+    if (!postToDelete) return;
+
+    setDeleting(true);
     try {
-      const response = await fetch(`/api/admin/blog/${id}`, {
+      const response = await fetch(`/api/admin/blog/${postToDelete.id}`, {
         method: "DELETE",
       });
 
       if (response.ok) {
-        setPosts(posts.filter((p) => p.id !== id));
-        showToast("success", "Post archived.");
+        setPosts(posts.filter((p) => p.id !== postToDelete.id));
+        showToast("success", "Post archived successfully.");
+        setDeleteConfirmOpen(false);
+        setPostToDelete(null);
       } else {
-        showToast("error", "Failed to archive post");
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || errorData.details || "Failed to archive post";
+        console.error("Error archiving post:", errorMessage, errorData);
+        showToast("error", errorMessage);
       }
     } catch (error) {
       console.error("Error deleting post:", error);
-      showToast("error", "Failed to archive post");
-    }
-  };
-
-  const handleImageUpload = async (file: File) => {
-    setUploadingImage(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("folder", "100afro/blog");
-
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setNewPost({ ...newPost, imageUrl: data.url });
-        setImagePreview(data.url);
-      } else {
-        const error = await response.json();
-        showToast("error", error.error || "Failed to upload image");
-      }
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      showToast("error", "Failed to upload image");
+      const errorMessage = error instanceof Error ? error.message : "Failed to archive post";
+      showToast("error", errorMessage);
     } finally {
-      setUploadingImage(false);
+      setDeleting(false);
     }
   };
 
-  const handleImageUrlChange = (url: string) => {
-    setNewPost({ ...newPost, imageUrl: url });
-    setImagePreview(url);
-  };
 
   const formatDate = (date: Date | string) => {
     const d = typeof date === "string" ? new Date(date) : date;
@@ -915,40 +783,14 @@ export default function AdminDashboard() {
                     <option value="PUBLISHED">Published</option>
                     <option value="ARCHIVED">Archived</option>
                   </select>
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setIsEditMode(false);
-                      setEditingPost(null);
-                      setImagePreview(null);
-                      setNewPost({
-                        title: "",
-                        category: "Music",
-                        excerpt: "",
-                        content: "",
-                        imageUrl: "https://picsum.photos/seed/new/800/600",
-                        featured: false,
-                        status: "DRAFT",
-                        publishAt: "",
-                        tags: "",
-                        metaTitle: "",
-                        metaDescription: "",
-                        canonicalUrl: "",
-                        ogImageUrl: "",
-                      });
-                      setIsModalOpen(true);
-                    }}
-                    onTouchStart={(e) => {
-                      e.stopPropagation();
-                    }}
+                  <Link
+                    href="/admin/posts/new"
                     className="bg-afro-primary hover:bg-white active:bg-white text-black font-bold px-4 lg:px-6 py-2.5 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap shadow-lg shadow-afro-primary/10 text-sm lg:text-base cursor-pointer touch-manipulation select-none relative z-10"
-                    type="button"
                   >
                     <Plus size={18} className="lg:w-5 lg:h-5" />{" "}
                     <span className="hidden sm:inline">New Article</span>
                     <span className="sm:hidden">New</span>
-                  </button>
+                  </Link>
                 </div>
               </div>
 
@@ -993,10 +835,14 @@ export default function AdminDashboard() {
                                   alt=""
                                 />
                               </div>
-                              <div className="min-w-0">
-                                <p className="text-white font-bold group-hover:text-afro-primary transition-colors truncate">
-                                  {post.title}
-                                </p>
+                              <div className="min-w-0 flex-1">
+                                <TruncatedTitle
+                                  title={post.title}
+                                  as="p"
+                                  className="text-white font-bold group-hover:text-afro-primary transition-colors"
+                                  maxLines={2}
+                                  showExpand={false}
+                                />
                                 <p className="text-xs text-gray-500 mt-0.5 truncate">
                                   /{post.slug}
                                 </p>
@@ -1041,7 +887,7 @@ export default function AdminDashboard() {
                                 <Edit3 size={18} />
                               </button>
                               <button
-                                onClick={() => deletePost(post.id)}
+                                onClick={() => openDeleteConfirm(post)}
                                 className="p-2 text-gray-500 hover:text-red-500 transition-colors"
                                 title="Delete"
                               >
@@ -1111,9 +957,12 @@ export default function AdminDashboard() {
                         />
                       </div>
                       <div className="flex-grow min-w-0">
-                        <h3 className="text-white font-bold text-sm mb-1 line-clamp-2">
-                          {post.title}
-                        </h3>
+                        <TruncatedTitle
+                          title={post.title}
+                          as="h3"
+                          className="text-white font-bold text-sm mb-1"
+                          maxLines={2}
+                        />
                         <p className="text-xs text-gray-500 mb-2">
                           /{post.slug}
                         </p>
@@ -1155,7 +1004,7 @@ export default function AdminDashboard() {
                           <Edit3 size={16} />
                         </button>
                         <button
-                          onClick={() => deletePost(post.id)}
+                          onClick={() => openDeleteConfirm(post)}
                           className="p-2 text-gray-500 hover:text-red-500 bg-gray-800 rounded-lg transition-colors"
                           title="Delete"
                         >
@@ -1743,407 +1592,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* New/Edit Post Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-black/80 backdrop-blur-md animate-in fade-in duration-300 safe-area-inset-top safe-area-inset-bottom">
-          <div className="flex-1 flex flex-col min-h-0 w-full max-w-3xl mx-auto bg-gray-900 border-x border-gray-700 shadow-2xl animate-in zoom-in-95 duration-300 lg:rounded-2xl lg:my-4 lg:border lg:max-h-[95vh]">
-            {/* Sticky Header */}
-            <div className="sticky top-0 bg-gray-900 border-b border-gray-800 p-4 lg:p-6 z-10 flex-shrink-0 safe-area-inset-top">
-              <div className="flex justify-between items-start gap-4">
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-xl lg:text-3xl font-display font-bold text-white leading-tight">
-                    {isEditMode ? "Edit Story" : "Create New Story"}
-                  </h2>
-                  <p className="text-gray-500 text-xs lg:text-sm mt-1">
-                    Crafting the next big trend on 100AFRO.
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setIsEditMode(false);
-                    setEditingPost(null);
-                    setImagePreview(null);
-                  }}
-                  className="text-gray-500 hover:text-white transition-colors p-2 -mr-2 flex-shrink-0 touch-manipulation"
-                  type="button"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-            </div>
-
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-4 lg:p-8">
-              <form id="post-form" onSubmit={handleCreatePost} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-widest">
-                      Main Headline
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={newPost.title}
-                      onChange={(e) =>
-                        setNewPost({ ...newPost, title: e.target.value })
-                      }
-                      className="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-afro-primary text-sm lg:text-base"
-                      placeholder="Ex: Burna Boy Secures Historic Collaboration"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-widest">
-                      Category
-                    </label>
-                    <select
-                      value={newPost.category}
-                      onChange={(e) =>
-                        setNewPost({
-                          ...newPost,
-                          category: e.target.value as BlogCategory,
-                        })
-                      }
-                      className="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-afro-primary text-sm lg:text-base"
-                    >
-                      <option value="Music">Music</option>
-                      <option value="Culture">Culture</option>
-                      <option value="Lifestyle">Lifestyle</option>
-                      <option value="News">News</option>
-                      <option value="Industry">Industry</option>
-                    </select>
-                  </div>
-
-                  <div className="flex items-center">
-                    <label className="flex items-center gap-2 text-xs font-bold uppercase text-gray-500 tracking-widest cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={newPost.featured}
-                        onChange={(e) =>
-                          setNewPost({ ...newPost, featured: e.target.checked })
-                        }
-                        disabled={user.role !== "ADMIN"}
-                        className="w-4 h-4 rounded border-gray-700 bg-gray-950 text-afro-primary focus:ring-afro-primary"
-                      />
-                      Featured Post
-                    </label>
-                    {user.role !== "ADMIN" && (
-                      <span className="ml-3 text-xs text-gray-500">
-                        (Admins only)
-                      </span>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-widest">
-                      Status
-                    </label>
-                    <select
-                      value={newPost.status}
-                      onChange={(e) =>
-                        setNewPost({
-                          ...newPost,
-                          status: e.target.value as any,
-                        })
-                      }
-                      disabled={user.role !== "ADMIN" && user.role !== "AUTHOR"}
-                      className="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-afro-primary text-sm lg:text-base"
-                    >
-                      <option value="DRAFT">Draft</option>
-                      <option value="IN_REVIEW">In review</option>
-                      {user.role === "ADMIN" && (
-                        <>
-                          <option value="PUBLISHED">Published</option>
-                          <option value="ARCHIVED">Archived</option>
-                        </>
-                      )}
-                    </select>
-                  </div>
-
-                  {user.role === "ADMIN" && (
-                    <div className="md:col-span-2">
-                      <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-widest">
-                        Schedule Publish (optional)
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={newPost.publishAt}
-                        onChange={(e) =>
-                          setNewPost({ ...newPost, publishAt: e.target.value })
-                        }
-                        className="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-afro-primary text-sm lg:text-base"
-                      />
-                      <p className="text-xs text-gray-500 mt-2">
-                        If status is <span className="text-gray-200 font-bold">Published</span> and this is set in the future, the post will be scheduled.
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-widest">
-                      Tags (comma separated)
-                    </label>
-                    <input
-                      type="text"
-                      value={newPost.tags}
-                      onChange={(e) =>
-                        setNewPost({ ...newPost, tags: e.target.value })
-                      }
-                      className="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-afro-primary text-sm lg:text-base"
-                      placeholder="afrobeats, music, culture"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-widest">
-                      Cover Image
-                    </label>
-
-                    {/* Upload Area */}
-                    <div className="mb-4">
-                      <label
-                        className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
-                          isDragging
-                            ? "border-afro-primary bg-afro-primary/10"
-                            : "border-gray-700 bg-gray-950 hover:bg-gray-900 hover:border-afro-primary"
-                        }`}
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          setIsDragging(true);
-                        }}
-                        onDragLeave={() => setIsDragging(false)}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          setIsDragging(false);
-                          const file = e.dataTransfer.files[0];
-                          if (file && file.type.startsWith("image/")) {
-                            if (file.size > 10 * 1024 * 1024) {
-                              showToast("error", "File size must be less than 10MB");
-                              return;
-                            }
-                            handleImageUpload(file);
-                          }
-                        }}
-                      >
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          {uploadingImage ? (
-                            <>
-                              <div className="w-8 h-8 border-4 border-afro-primary border-t-transparent rounded-full animate-spin mb-2"></div>
-                              <p className="text-sm text-gray-400">
-                                Uploading to Cloudinary...
-                              </p>
-                            </>
-                          ) : (
-                            <>
-                              <ImageIcon
-                                className="w-8 h-8 mb-2 text-gray-500"
-                                size={32}
-                              />
-                              <p className="mb-2 text-sm text-gray-400">
-                                <span className="font-semibold text-afro-primary">
-                                  Click to upload
-                                </span>{" "}
-                                or drag and drop
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                PNG, JPG, GIF up to 10MB
-                              </p>
-                            </>
-                          )}
-                        </div>
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              if (file.size > 10 * 1024 * 1024) {
-                                showToast("error", "File size must be less than 10MB");
-                                return;
-                              }
-                              handleImageUpload(file);
-                            }
-                          }}
-                          disabled={uploadingImage}
-                        />
-                      </label>
-                    </div>
-
-                    {/* Or use URL */}
-                    <div className="relative">
-                      <ImageIcon
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600"
-                        size={18}
-                      />
-                      <input
-                        type="url"
-                        value={newPost.imageUrl}
-                        onChange={(e) => handleImageUrlChange(e.target.value)}
-                        className="w-full bg-gray-950 border border-gray-700 rounded-xl py-3 pl-10 pr-4 text-white focus:outline-none focus:border-afro-primary text-sm lg:text-base"
-                        placeholder="Or paste image URL here..."
-                      />
-                    </div>
-
-                    {/* Preview */}
-                    {(newPost.imageUrl || imagePreview) && (
-                      <div className="mt-4 w-full h-48 rounded-lg overflow-hidden border border-gray-700 bg-gray-800">
-                        <img
-                          src={imagePreview || newPost.imageUrl}
-                          alt="Preview"
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display =
-                              "none";
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-widest">
-                      Summary Excerpt
-                    </label>
-                    <textarea
-                      rows={3}
-                      required
-                      value={newPost.excerpt}
-                      onChange={(e) =>
-                        setNewPost({ ...newPost, excerpt: e.target.value })
-                      }
-                      className="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-afro-primary resize-none text-sm lg:text-base"
-                      placeholder="A brief hook for the article list view..."
-                    ></textarea>
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-widest">
-                      Story Content
-                    </label>
-                    <textarea
-                      rows={10}
-                      required
-                      value={newPost.content}
-                      onChange={(e) =>
-                        setNewPost({ ...newPost, content: e.target.value })
-                      }
-                      className="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-afro-primary resize-none text-sm lg:text-base font-mono"
-                      placeholder="Write your story here..."
-                    ></textarea>
-                  </div>
-                </div>
-
-                {/* SEO (optional) */}
-                <div className="mt-2 bg-gray-950 border border-gray-800 rounded-2xl p-4 lg:p-6">
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-4">
-                    SEO (optional)
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                      <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-widest">
-                        Meta Title
-                      </label>
-                      <input
-                        type="text"
-                        value={newPost.metaTitle}
-                        onChange={(e) =>
-                          setNewPost({ ...newPost, metaTitle: e.target.value })
-                        }
-                        className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-afro-primary text-sm"
-                        placeholder="Optional SEO title (defaults to headline)"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-widest">
-                        Meta Description
-                      </label>
-                      <textarea
-                        rows={3}
-                        value={newPost.metaDescription}
-                        onChange={(e) =>
-                          setNewPost({
-                            ...newPost,
-                            metaDescription: e.target.value,
-                          })
-                        }
-                        className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-afro-primary resize-none text-sm"
-                        placeholder="Optional SEO description (defaults to excerpt)"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-widest">
-                        Canonical URL
-                      </label>
-                      <input
-                        type="url"
-                        value={newPost.canonicalUrl}
-                        onChange={(e) =>
-                          setNewPost({
-                            ...newPost,
-                            canonicalUrl: e.target.value,
-                          })
-                        }
-                        className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-afro-primary text-sm"
-                        placeholder="https://..."
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-gray-500 mb-2 tracking-widest">
-                        OG Image URL
-                      </label>
-                      <input
-                        type="url"
-                        value={newPost.ogImageUrl}
-                        onChange={(e) =>
-                          setNewPost({ ...newPost, ogImageUrl: e.target.value })
-                        }
-                        className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-afro-primary text-sm"
-                        placeholder="https://..."
-                      />
-                    </div>
-                  </div>
-                </div>
-
-              </form>
-            </div>
-
-            {/* Sticky Footer with Buttons */}
-            <div className="sticky bottom-0 bg-gray-900 border-t border-gray-800 p-4 lg:p-6 z-10 flex-shrink-0 safe-area-inset-bottom">
-              <div className="flex flex-col sm:flex-row gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsModalOpen(false);
-                      setIsEditMode(false);
-                      setEditingPost(null);
-                      setImagePreview(null);
-                    }}
-                  className="flex-1 border border-gray-700 text-gray-400 hover:bg-gray-800 active:bg-gray-800 font-bold py-3 lg:py-4 rounded-xl transition-all text-sm lg:text-base touch-manipulation"
-                  >
-                    Discard
-                  </button>
-                  <button
-                    type="submit"
-                  form="post-form"
-                  className="flex-1 bg-afro-primary text-black font-bold py-3 lg:py-4 rounded-xl hover:bg-white active:bg-white transition-all shadow-xl shadow-afro-primary/20 flex items-center justify-center gap-2 text-sm lg:text-base touch-manipulation"
-                  >
-                    {isEditMode ? (
-                      <>
-                        <Save size={18} /> Update Story
-                      </>
-                    ) : (
-                      <>
-                      <Plus size={18} /> Save Story
-                      </>
-                    )}
-                  </button>
-                </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal removed - using dedicated pages at /admin/posts/new and /admin/posts/[id]/edit */}
 
       {/* Revisions Modal */}
       {isRevisionsOpen && revisionsPost && (
@@ -2219,6 +1668,89 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmOpen && postToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300 safe-area-inset-top safe-area-inset-bottom p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl max-w-md w-full animate-in zoom-in-95 duration-300">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-800">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
+                  <AlertTriangle className="text-red-500" size={24} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xl font-display font-bold text-white mb-1">
+                    Archive Post?
+                  </h3>
+                  <p className="text-sm text-gray-400">
+                    This action will archive the post. You can restore it later from revisions.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Post Preview */}
+            <div className="p-6 border-b border-gray-800 bg-gray-950/50">
+              <div className="flex gap-4">
+                <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-gray-800 border border-gray-700">
+                  <img
+                    src={postToDelete.imageUrl}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-white font-bold text-sm mb-1 line-clamp-2">
+                    {postToDelete.title}
+                  </h4>
+                  <p className="text-xs text-gray-500 mb-2">
+                    /{postToDelete.slug}
+                  </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded uppercase">
+                      {postToDelete.category}
+                    </span>
+                    <span className="text-xs font-bold text-gray-300 bg-gray-800 px-2 py-0.5 rounded uppercase">
+                      {postToDelete.status || "DRAFT"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="p-6 flex items-center justify-end gap-3">
+              <button
+                onClick={closeDeleteConfirm}
+                disabled={deleting}
+                className="px-4 py-2.5 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 font-bold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={deletePost}
+                disabled={deleting}
+                className="px-4 py-2.5 rounded-xl bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25 font-bold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation flex items-center gap-2"
+                type="button"
+              >
+                {deleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin"></div>
+                    Archiving...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={16} />
+                    Archive Post
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

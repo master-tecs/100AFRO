@@ -67,6 +67,55 @@ async function createRevisionSnapshot(postId: string, userId: string) {
   });
 }
 
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await getUser(request);
+
+    if (!user || (user.role !== "ADMIN" && user.role !== "AUTHOR")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!prisma) {
+      return NextResponse.json({ error: "Database not available" }, { status: 503 });
+    }
+
+    const { id } = await params;
+
+    const post = await prisma.blogPost.findUnique({
+      where: { id },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        },
+      },
+    });
+
+    if (!post) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+
+    // Check authorization for authors
+    if (user.role === "AUTHOR" && post.authorId !== user.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    return NextResponse.json(post);
+  } catch (error) {
+    console.error("Error fetching blog post:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch blog post" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -110,6 +159,15 @@ export async function PUT(
       if (existing.status === PostStatus.PUBLISHED || existing.status === PostStatus.ARCHIVED) {
         return NextResponse.json({ error: "Authors cannot edit published/archived posts" }, { status: 403 });
       }
+    }
+
+    // Verify user exists in database before using their ID
+    const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+    if (!dbUser) {
+      return NextResponse.json(
+        { error: "User not found in database. Please log in again." },
+        { status: 401 }
+      );
     }
 
     await createRevisionSnapshot(existing.id, user.id);
@@ -190,36 +248,61 @@ export async function DELETE(
     const user = await getUser(request);
 
     if (!user || (user.role !== "ADMIN" && user.role !== "AUTHOR")) {
+      console.error("[DELETE /api/admin/blog/[id]] Unauthorized - no user or invalid role");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const rl = rateLimit(request, { windowMs: 60_000, max: 60, keyPrefix: "admin:blog:write", key: user.id });
     if (!rl.ok) {
+      console.error("[DELETE /api/admin/blog/[id]] Rate limit exceeded");
       return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
     }
 
     if (!prisma) {
+      console.error("[DELETE /api/admin/blog/[id]] Database not available");
       return NextResponse.json({ error: "Database not available" }, { status: 503 });
     }
 
     const { id } = await params;
+    console.log(`[DELETE /api/admin/blog/[id]] Attempting to archive post: ${id}`);
+
     const existing = await prisma.blogPost.findUnique({ where: { id } });
     if (!existing) {
+      console.error(`[DELETE /api/admin/blog/[id]] Post not found: ${id}`);
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
     if (user.role === "AUTHOR") {
       if (existing.authorId !== user.id) {
+        console.error(`[DELETE /api/admin/blog/[id]] Author unauthorized: ${user.id} != ${existing.authorId}`);
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
       if (existing.status === PostStatus.PUBLISHED) {
+        console.error(`[DELETE /api/admin/blog/[id]] Author cannot archive published post`);
         return NextResponse.json({ error: "Authors cannot archive published posts" }, { status: 403 });
       }
     }
 
-    await createRevisionSnapshot(existing.id, user.id);
+    // Verify user exists in database before using their ID
+    const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+    if (!dbUser) {
+      console.error(`[DELETE /api/admin/blog/[id]] User from token not found in database: ${user.id}`);
+      return NextResponse.json(
+        { error: "User not found in database. Please log in again." },
+        { status: 401 }
+      );
+    }
 
-    await prisma.blogPost.update({
+    // Create revision snapshot (non-blocking - don't fail if this fails)
+    try {
+      await createRevisionSnapshot(existing.id, user.id);
+      console.log(`[DELETE /api/admin/blog/[id]] Revision snapshot created for post: ${id}`);
+    } catch (revisionError) {
+      console.error(`[DELETE /api/admin/blog/[id]] Error creating revision snapshot (non-blocking):`, revisionError);
+      // Continue with archiving even if revision creation fails
+    }
+
+    const updated = await prisma.blogPost.update({
       where: { id },
       data: {
         status: PostStatus.ARCHIVED,
@@ -227,11 +310,15 @@ export async function DELETE(
       },
     });
 
-    return NextResponse.json({ success: true });
+    console.log(`[DELETE /api/admin/blog/[id]] Successfully archived post: ${id}`);
+    return NextResponse.json({ success: true, post: updated });
   } catch (error) {
-    console.error("Error deleting blog post:", error);
+    console.error("[DELETE /api/admin/blog/[id]] Error archiving blog post:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error("[DELETE /api/admin/blog/[id]] Error stack:", errorStack);
     return NextResponse.json(
-      { error: "Failed to delete blog post" },
+      { error: "Failed to archive blog post", details: errorMessage },
       { status: 500 }
     );
   }
