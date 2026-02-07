@@ -100,6 +100,7 @@ export default function AdminDashboard() {
   const [videos, setVideos] = useState<any[]>([]);
   const [videosLoading, setVideosLoading] = useState(false);
   const [updatingVideoId, setUpdatingVideoId] = useState<string | null>(null);
+  const [refreshingDailyFact, setRefreshingDailyFact] = useState(false);
 
   // Polls (Admin)
   const [pollsLoading, setPollsLoading] = useState(false);
@@ -512,6 +513,34 @@ export default function AdminDashboard() {
       showToast("error", error.message || "Failed to sync videos");
     } finally {
       setSyncingVideos(false);
+    }
+  };
+
+  const refreshDailyFact = async () => {
+    setRefreshingDailyFact(true);
+    try {
+      const res = await fetch("/api/admin/daily-fact/refresh", {
+        method: "POST",
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast("error", err.error || "Failed to refresh daily fact");
+        return;
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        const message = `Daily fact refreshed! Imported ${data.imported || 0} facts for ${data.month}/${data.day}.`;
+        showToast("success", message);
+      } else {
+        showToast("error", "Failed to refresh daily fact");
+      }
+    } catch (error: any) {
+      console.error("Error refreshing daily fact:", error);
+      showToast("error", error.message || "Failed to refresh daily fact");
+    } finally {
+      setRefreshingDailyFact(false);
     }
   };
 
@@ -1415,9 +1444,52 @@ export default function AdminDashboard() {
           {/* Stats Tab */}
           {activeTab === "stats" && (
             <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 lg:p-8">
-              <h2 className="text-2xl font-display font-bold text-white mb-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-display font-bold text-white">
+                  Analytics & Settings
+                </h2>
+              </div>
+
+              {/* Daily Fact Management */}
+              <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 mb-6">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+                  <div>
+                    <h3 className="text-white font-bold mb-2 flex items-center gap-2">
+                      <Clock size={20} />
+                      On This Day in History
+                    </h3>
+                    <p className="text-gray-400 text-sm">
+                      Refresh the daily fact shown on the homepage. Facts are fetched from MusicBrainz/Wikidata.
+                    </p>
+                  </div>
+                  <button
+                    onClick={refreshDailyFact}
+                    disabled={refreshingDailyFact}
+                    className="flex items-center gap-2 bg-afro-primary hover:bg-afro-primary/90 disabled:bg-gray-700 disabled:cursor-not-allowed text-black font-semibold px-4 py-2 rounded-lg transition-colors duration-200 whitespace-nowrap"
+                  >
+                    {refreshingDailyFact ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                        Refreshing...
+                      </>
+                    ) : (
+                      <>
+                        <Clock size={18} />
+                        Refresh Daily Fact
+                      </>
+                    )}
+                  </button>
+                </div>
+                <div className="text-xs text-gray-500 space-y-1">
+                  <p>• Fetches facts from MusicBrainz/Wikidata for today's date</p>
+                  <p>• Updates the fact displayed on the homepage</p>
+                  <p>• Automatic daily refresh via Vercel Cron (5:00 AM UTC)</p>
+                </div>
+              </div>
+
+              <h3 className="text-xl font-display font-bold text-white mb-4">
                 Analytics Dashboard
-              </h2>
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
                   <div className="flex items-center gap-3 mb-4">

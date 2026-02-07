@@ -7,8 +7,16 @@ import VideoCard from './components/VideoCard';
 import NewsletterForm from './components/NewsletterForm';
 import PollWidget from './components/PollWidget';
 import TruncatedTitle from './components/TruncatedTitle';
+import { unstable_noStore } from 'next/cache';
+
+// Force dynamic rendering to ensure daily fact is always fresh
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 async function getHomeData() {
+  // Disable caching for this function to ensure fresh data, especially for daily fact
+  unstable_noStore();
+  
   // Initialize with empty data
   let featuredPost = null;
   let subFeaturedPosts: any[] = [];
