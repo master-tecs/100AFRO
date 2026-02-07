@@ -148,6 +148,7 @@ model Video {
   duration     String
   views        String
   date         String
+  publishedAt  DateTime?     // YouTube publish date
   category     VideoCategory
   featured     Boolean       @default(false)
   tags         String[]      @default([])
@@ -157,6 +158,7 @@ model Video {
   @@index([category])
   @@index([featured])
   @@index([createdAt])
+  @@index([publishedAt])
 }
 
 model ChartEntry {

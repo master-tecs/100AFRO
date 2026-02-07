@@ -95,6 +95,7 @@ export default function AdminDashboard() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [postToDelete, setPostToDelete] = useState<BlogPost | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [syncingVideos, setSyncingVideos] = useState(false);
 
   // Polls (Admin)
   const [pollsLoading, setPollsLoading] = useState(false);
@@ -427,6 +428,40 @@ export default function AdminDashboard() {
       showToast("error", "Failed to load results");
     } finally {
       setPollResultsLoading(false);
+    }
+  };
+
+  const syncYouTubeVideos = async () => {
+    setSyncingVideos(true);
+    try {
+      const res = await fetch("/api/youtube/sync", {
+        method: "POST",
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast("error", err.error || err.message || "Failed to sync videos");
+        return;
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        const stats = data.stats || {};
+        const message = `Successfully synced ${stats.fetched || 0} videos: ${stats.created || 0} created, ${stats.updated || 0} updated`;
+        showToast("success", message);
+        
+        // Refresh the page after a short delay to show the updated state
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        showToast("error", data.message || "Sync completed with errors");
+      }
+    } catch (error: any) {
+      console.error("Error syncing videos:", error);
+      showToast("error", error.message || "Failed to sync videos");
+    } finally {
+      setSyncingVideos(false);
     }
   };
 
@@ -1410,15 +1445,63 @@ export default function AdminDashboard() {
           {/* Videos Tab */}
           {activeTab === "videos" && (
             <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 lg:p-8">
-              <h2 className="text-2xl font-display font-bold text-white mb-6">
-                Video Management
-              </h2>
-              <div className="text-center py-12">
-                <VideoIcon className="mx-auto text-gray-600 mb-4" size={48} />
-                <p className="text-gray-400 font-medium">
-                  Video management coming soon...
-                </p>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-display font-bold text-white">
+                  Video Management
+                </h2>
+                <button
+                  onClick={syncYouTubeVideos}
+                  disabled={syncingVideos}
+                  className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold px-4 py-2 rounded-lg transition-colors duration-200"
+                >
+                  {syncingVideos ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Syncing...
+                    </>
+                  ) : (
+                    <>
+                      <VideoIcon size={18} />
+                      Sync from YouTube
+                    </>
+                  )}
+                </button>
               </div>
+              
+              <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 mb-6">
+                <h3 className="text-white font-bold mb-2">Sync Videos from @100AFRO</h3>
+                <p className="text-gray-400 text-sm mb-4">
+                  This will fetch all public videos from your YouTube channel (@100AFRO) and sync them to the database.
+                  Videos are matched by YouTube ID, so existing videos will be updated and new ones will be added.
+                </p>
+                <div className="text-xs text-gray-500 space-y-1">
+                  <p>• Requires YOUTUBE_API_KEY in environment variables</p>
+                  <p>• Fetches up to 200 most recent videos</p>
+                  <p>• Sync may take a few moments depending on video count</p>
+                </div>
+              </div>
+
+              {syncingVideos ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 border-4 border-afro-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                  <p className="text-white font-medium mb-2">Syncing videos from YouTube...</p>
+                  <p className="text-gray-400 text-sm">This may take a few moments. Please wait...</p>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <VideoIcon className="mx-auto text-gray-600 mb-4" size={48} />
+                  <p className="text-gray-400 font-medium mb-2">
+                    Click 'Sync from YouTube' to import videos from your channel
+                  </p>
+                  <Link
+                    href="/videos"
+                    target="_blank"
+                    className="text-afro-primary hover:underline text-sm inline-flex items-center gap-1 mt-4"
+                  >
+                    View Videos Page <ExternalLink size={14} />
+                  </Link>
+                </div>
+              )}
             </div>
           )}
         </div>

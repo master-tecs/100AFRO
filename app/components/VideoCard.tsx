@@ -2,7 +2,8 @@
 
 import React, { useState, useRef } from 'react';
 import { VideoCategory } from '@prisma/client';
-import { Play, Volume2, VolumeX } from 'lucide-react';
+import { Play, Volume2, VolumeX, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 
 interface Video {
   id: string;
@@ -44,36 +45,63 @@ const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
     }
   };
 
+  const youtubeUrl = `https://www.youtube.com/watch?v=${video.youtubeId}`;
+
   return (
     <div className="bg-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 group border border-gray-700 flex flex-col h-full">
       <div className="relative aspect-video bg-black group-card">
         {!isPlaying ? (
-          <button
-            onClick={() => setIsPlaying(true)}
-            className="w-full h-full relative cursor-pointer group block"
-            aria-label={`Play video: ${video.title}`}
-          >
-            <img
-              src={displayThumbnail}
-              alt={video.title}
-              className="w-full h-full object-cover opacity-80 group-hover:opacity-60 transition-opacity"
-              onError={(e) => {
-                // Fallback if maxresdefault doesn't exist (some videos only have hqdefault)
-                const target = e.target as HTMLImageElement;
-                if (target.src.includes('maxresdefault')) {
-                    target.src = `https://img.youtube.com/vi/${video.youtubeId}/hqdefault.jpg`;
-                }
+          <div className="relative w-full h-full">
+            {/* Thumbnail - Clickable link to YouTube */}
+            <Link
+              href={youtubeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full h-full relative"
+              aria-label={`Watch ${video.title} on YouTube`}
+            >
+              <img
+                src={displayThumbnail}
+                alt={video.title}
+                className="w-full h-full object-cover opacity-80 group-hover:opacity-60 transition-opacity"
+                onError={(e) => {
+                  // Fallback if maxresdefault doesn't exist (some videos only have hqdefault)
+                  const target = e.target as HTMLImageElement;
+                  if (target.src.includes('maxresdefault')) {
+                      target.src = `https://img.youtube.com/vi/${video.youtubeId}/hqdefault.jpg`;
+                  }
+                }}
+              />
+            </Link>
+            
+            {/* Play Button Overlay - Plays inline */}
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsPlaying(true);
               }}
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-14 h-14 bg-red-600 rounded-full flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
+              className="absolute inset-0 flex items-center justify-center z-10"
+              aria-label={`Play video: ${video.title}`}
+            >
+              <div className="w-14 h-14 bg-red-600 rounded-full flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform hover:bg-red-700">
                 <Play className="text-white ml-1" size={24} fill="currentColor" />
               </div>
-            </div>
-            <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
+            </button>
+            
+            {/* Duration Badge */}
+            <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded z-10">
               {video.duration}
             </div>
-          </button>
+            
+            {/* YouTube Badge */}
+            <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1 z-10">
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+              </svg>
+              YouTube
+            </div>
+          </div>
         ) : (
           <div className="relative w-full h-full animate-in fade-in duration-300">
             <iframe
@@ -123,6 +151,17 @@ const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
           </span>
           <span>{video.date}</span>
         </div>
+        
+        {/* Watch on YouTube Button */}
+        <Link
+          href={youtubeUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors duration-200"
+        >
+          <ExternalLink size={16} />
+          Watch on YouTube
+        </Link>
       </div>
     </div>
   );
