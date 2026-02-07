@@ -37,12 +37,20 @@ export default async function ChartsPage({ searchParams }: ChartsPageProps) {
     });
     if (res.ok) {
       const data = await res.json();
-      itunesSongs = data.songs || [];
-      itunesAlbums = data.albums || [];
+      if (data.error) {
+        console.error('Charts API error:', data.error);
+        usedFallback = true;
+      } else {
+        itunesSongs = data.songs || [];
+        itunesAlbums = data.albums || [];
+      }
     } else {
+      const errorData = await res.json().catch(() => ({}));
+      console.error('Charts API failed:', res.status, errorData);
       usedFallback = true;
     }
-  } catch {
+  } catch (error) {
+    console.error('Error fetching live charts:', error);
     usedFallback = true;
   }
 

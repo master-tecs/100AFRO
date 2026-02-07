@@ -10,6 +10,16 @@ function todayUtc() {
 }
 
 function isAuthorizedBySecret(req: NextRequest) {
+  // Check for Vercel CRON_SECRET (automatically sent by Vercel cron jobs)
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret) {
+    const authHeader = req.headers.get("authorization");
+    if (authHeader === `Bearer ${cronSecret}`) {
+      return true;
+    }
+  }
+  
+  // Check for manual DAILY_FACT_REFRESH_SECRET (for manual/admin calls)
   const secret = process.env.DAILY_FACT_REFRESH_SECRET;
   if (!secret) return false;
   const qs = req.nextUrl.searchParams.get("secret");
@@ -18,7 +28,7 @@ function isAuthorizedBySecret(req: NextRequest) {
   return qs === secret || bearer === secret;
 }
 
-export async function POST(request: NextRequest) {
+async function handleRefresh(request: NextRequest) {
   try {
     const user = await getUser(request);
     const secretOk = isAuthorizedBySecret(request);
@@ -109,3 +119,11 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// Support both GET (for Vercel cron jobs) and POST (for manual/admin calls)
+export async function GET(request: NextRequest) {
+  return handleRefresh(request);
+}
+
+export async function POST(request: NextRequest) {
+  return handleRefresh(request);
+}

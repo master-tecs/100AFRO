@@ -187,13 +187,35 @@ We do **not** host or redistribute audio. Charts are powered by Apple's free RSS
 
 ## Daily Fact (On This Day in History) Automation
 
-The homepage “On This Day in History” block is backed by the `OnThisDayFact` table and can be refreshed daily via:
-- `POST /api/admin/daily-fact/refresh?secret=YOUR_SECRET`
+The homepage "On This Day in History" block is backed by the `OnThisDayFact` table and can be refreshed daily automatically using Vercel Cron Jobs.
 
-### Vercel Cron (recommended)
-- Add `DAILY_FACT_REFRESH_SECRET` in Vercel env vars
-- Create a Vercel Cron job (e.g. 00:05 UTC daily) to call:
-  - `POST https://YOUR_DOMAIN/api/admin/daily-fact/refresh?secret=YOUR_SECRET`
+### Automatic Daily Updates (Vercel Cron)
+
+The project includes a `vercel.json` configuration that sets up automatic daily fact refresh at 5:00 AM UTC every day.
+
+**Setup Steps:**
+
+1. **Add CRON_SECRET environment variable in Vercel:**
+   - Go to your Vercel project → Settings → Environment Variables
+   - Add `CRON_SECRET` with a random string (at least 16 characters)
+   - Use a password generator like [1Password](https://1password.com/password-generator/) to create a secure secret
+   - Make sure to add it to **Production** environment
+
+2. **Deploy your project:**
+   - The cron job is configured in `vercel.json`
+   - After deployment, Vercel will automatically create the cron job
+   - You can view it in: Settings → Cron Jobs
+
+3. **Verify the cron job:**
+   - Go to Settings → Cron Jobs in your Vercel dashboard
+   - You should see a cron job for `/api/admin/daily-fact/refresh`
+   - It will run daily at 5:00 AM UTC (`0 5 * * *`)
+
+### Manual Refresh
+
+You can also manually refresh the daily fact:
+- **Via Admin Dashboard:** Use the "Refresh Daily Fact" button in the Stats/Analytics tab
+- **Via API:** `POST /api/admin/daily-fact/refresh` (requires admin authentication or `DAILY_FACT_REFRESH_SECRET`)
 
 ### Attribution
 Facts are sourced from Wikidata (and optionally enriched with MusicBrainz links). Include attribution if you display source links.

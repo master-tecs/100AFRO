@@ -80,13 +80,21 @@ export async function getTopSongs(
   try {
     const response = await fetch(url, {
       cache: "no-store",
+      headers: {
+        'User-Agent': '100AFRO/1.0',
+      },
     });
 
     if (!response.ok) {
-      throw new Error(`iTunes RSS error (${response.status}): ${response.statusText}`);
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`iTunes RSS error (${response.status}): ${response.statusText} - ${errorText}`);
     }
 
     const data = (await response.json()) as iTunesRSSResponse;
+    
+    if (!data.feed || !data.feed.results || data.feed.results.length === 0) {
+      throw new Error('iTunes RSS returned empty results');
+    }
 
     const items: iTunesSongChartItem[] = (data.feed?.results || [])
       .map((song, idx) => ({
@@ -122,13 +130,21 @@ export async function getNewReleases(
   try {
     const response = await fetch(url, {
       cache: "no-store",
+      headers: {
+        'User-Agent': '100AFRO/1.0',
+      },
     });
 
     if (!response.ok) {
-      throw new Error(`iTunes RSS error (${response.status}): ${response.statusText}`);
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`iTunes RSS error (${response.status}): ${response.statusText} - ${errorText}`);
     }
 
     const data = (await response.json()) as iTunesRSSResponse;
+    
+    if (!data.feed || !data.feed.results || data.feed.results.length === 0) {
+      throw new Error('iTunes RSS returned empty results');
+    }
 
     const items: iTunesAlbumItem[] = (data.feed?.results || [])
       .map((album, idx) => ({
