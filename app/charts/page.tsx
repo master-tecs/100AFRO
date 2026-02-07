@@ -5,6 +5,7 @@ import { ChartType, ChartTrend } from '@prisma/client';
 import { ArrowUp, ArrowDown, Minus, Sparkles } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 interface ChartsPageProps {
   searchParams?: Promise<{ country?: string }>;

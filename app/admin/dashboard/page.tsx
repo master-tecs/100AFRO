@@ -101,6 +101,7 @@ export default function AdminDashboard() {
   const [videosLoading, setVideosLoading] = useState(false);
   const [updatingVideoId, setUpdatingVideoId] = useState<string | null>(null);
   const [refreshingDailyFact, setRefreshingDailyFact] = useState(false);
+  const [refreshingCharts, setRefreshingCharts] = useState(false);
 
   // Polls (Admin)
   const [pollsLoading, setPollsLoading] = useState(false);
@@ -541,6 +542,55 @@ export default function AdminDashboard() {
       showToast("error", error.message || "Failed to refresh daily fact");
     } finally {
       setRefreshingDailyFact(false);
+    }
+  };
+
+  const refreshCharts = async () => {
+    setRefreshingCharts(true);
+    try {
+      // Refresh charts for all countries
+      const countries = ["NG", "GH", "ZA"];
+      const results = await Promise.all(
+        countries.map(async (country) => {
+          const res = await fetch(`/api/admin/charts/refresh?country=${country}`, {
+            method: "POST",
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            return { country, success: false, error: err.error || "Failed" };
+          }
+          const data = await res.json();
+          return { country, success: data.success, counts: data.counts };
+        })
+      );
+
+      const successful = results.filter((r) => r.success);
+      const failed = results.filter((r) => !r.success);
+
+      if (successful.length > 0) {
+        const totalSongs = successful.reduce((sum, r) => sum + (r.counts?.songs || 0), 0);
+        const totalAlbums = successful.reduce((sum, r) => sum + (r.counts?.albums || 0), 0);
+        showToast(
+          "success",
+          `Charts refreshed! ${totalSongs} songs and ${totalAlbums} albums imported.`
+        );
+      }
+
+      if (failed.length > 0) {
+        showToast(
+          "error",
+          `Some charts failed to refresh: ${failed.map((f) => f.country).join(", ")}`
+        );
+      }
+
+      if (successful.length === 0) {
+        showToast("error", "Failed to refresh charts. Check server logs for details.");
+      }
+    } catch (error: any) {
+      console.error("Error refreshing charts:", error);
+      showToast("error", error.message || "Failed to refresh charts");
+    } finally {
+      setRefreshingCharts(false);
     }
   };
 
@@ -1484,6 +1534,43 @@ export default function AdminDashboard() {
                   <p>• Fetches facts from MusicBrainz/Wikidata for today's date</p>
                   <p>• Updates the fact displayed on the homepage</p>
                   <p>• Automatic daily refresh via Vercel Cron (5:00 AM UTC)</p>
+                </div>
+              </div>
+
+              {/* Charts Management */}
+              <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 mb-6">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+                  <div>
+                    <h3 className="text-white font-bold mb-2 flex items-center gap-2">
+                      <BarChart size={20} />
+                      Music Charts
+                    </h3>
+                    <p className="text-gray-400 text-sm">
+                      Refresh charts from Apple Music/iTunes RSS feeds. Charts are automatically fetched, but you can manually refresh if needed.
+                    </p>
+                  </div>
+                  <button
+                    onClick={refreshCharts}
+                    disabled={refreshingCharts}
+                    className="flex items-center gap-2 bg-afro-primary hover:bg-afro-primary/90 disabled:bg-gray-700 disabled:cursor-not-allowed text-black font-semibold px-4 py-2 rounded-lg transition-colors duration-200 whitespace-nowrap"
+                  >
+                    {refreshingCharts ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                        Refreshing...
+                      </>
+                    ) : (
+                      <>
+                        <BarChart size={18} />
+                        Refresh Charts
+                      </>
+                    )}
+                  </button>
+                </div>
+                <div className="text-xs text-gray-500 space-y-1">
+                  <p>• Fetches top songs and albums from Apple Music RSS feeds</p>
+                  <p>• Updates charts for Nigeria, Ghana, and South Africa</p>
+                  <p>• Charts are displayed on the /charts page</p>
                 </div>
               </div>
 

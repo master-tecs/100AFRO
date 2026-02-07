@@ -75,44 +75,64 @@ export async function getTopSongs(
   if (cached) return cached;
 
   const countryCode = countryCodeToLowerCase(country);
-  const url = `https://rss.applemarketingtools.com/api/v2/${countryCode}/music/most-played/50/songs.json`;
+  // Try alternative endpoint format if the first one fails
+  const urls = [
+    `https://rss.applemarketingtools.com/api/v2/${countryCode}/music/most-played/50/songs.json`,
+    `https://rss.itunes.apple.com/api/v1/${countryCode}/apple-music/top-songs/all/50/explicit.json`,
+  ];
 
-  try {
-    const response = await fetch(url, {
-      cache: "no-store",
-      headers: {
-        'User-Agent': '100AFRO/1.0',
-      },
-    });
+  let lastError: Error | null = null;
+  
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, {
+        cache: "no-store",
+        headers: {
+          'User-Agent': '100AFRO/1.0',
+          'Accept': 'application/json',
+        },
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      throw new Error(`iTunes RSS error (${response.status}): ${response.statusText} - ${errorText}`);
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        lastError = new Error(`iTunes RSS error (${response.status}): ${response.statusText} - ${errorText}`);
+        continue; // Try next URL
+      }
+
+      const data = (await response.json()) as iTunesRSSResponse;
+      
+      if (!data.feed || !data.feed.results || data.feed.results.length === 0) {
+        lastError = new Error('iTunes RSS returned empty results');
+        continue; // Try next URL
+      }
+
+      const items: iTunesSongChartItem[] = (data.feed?.results || [])
+        .map((song, idx) => ({
+          rank: idx + 1,
+          title: song.name,
+          artist: song.artistName,
+          coverUrl: song.artworkUrl100,
+          appleMusicLink: song.url,
+          previewUrl: (song as iTunesSongItem).previewUrl ?? null,
+        }))
+        .filter((x) => x.title && x.artist && x.coverUrl && x.appleMusicLink);
+
+      cacheSet(cacheKey, items, ttl);
+      return items;
+    } catch (error) {
+      console.error(`Error fetching from ${url}:`, error);
+      lastError = error as Error;
+      continue; // Try next URL
     }
-
-    const data = (await response.json()) as iTunesRSSResponse;
-    
-    if (!data.feed || !data.feed.results || data.feed.results.length === 0) {
-      throw new Error('iTunes RSS returned empty results');
-    }
-
-    const items: iTunesSongChartItem[] = (data.feed?.results || [])
-      .map((song, idx) => ({
-        rank: idx + 1,
-        title: song.name,
-        artist: song.artistName,
-        coverUrl: song.artworkUrl100,
-        appleMusicLink: song.url,
-        previewUrl: (song as iTunesSongItem).previewUrl ?? null,
-      }))
-      .filter((x) => x.title && x.artist && x.coverUrl && x.appleMusicLink);
-
-    cacheSet(cacheKey, items, ttl);
-    return items;
-  } catch (error) {
-    console.error("Error fetching iTunes top songs:", error);
-    throw error;
   }
+  
+  // If all URLs failed, throw the last error
+  if (lastError) {
+    console.error("All iTunes RSS endpoints failed for", country);
+    throw lastError;
+  }
+  
+  throw new Error("No valid iTunes RSS endpoint found");
 }
 
 export async function getNewReleases(
@@ -125,42 +145,62 @@ export async function getNewReleases(
   if (cached) return cached;
 
   const countryCode = countryCodeToLowerCase(country);
-  const url = `https://rss.applemarketingtools.com/api/v2/${countryCode}/music/most-played/20/albums.json`;
+  // Try alternative endpoint format if the first one fails
+  const urls = [
+    `https://rss.applemarketingtools.com/api/v2/${countryCode}/music/most-played/20/albums.json`,
+    `https://rss.itunes.apple.com/api/v1/${countryCode}/apple-music/top-albums/all/20/explicit.json`,
+  ];
 
-  try {
-    const response = await fetch(url, {
-      cache: "no-store",
-      headers: {
-        'User-Agent': '100AFRO/1.0',
-      },
-    });
+  let lastError: Error | null = null;
+  
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, {
+        cache: "no-store",
+        headers: {
+          'User-Agent': '100AFRO/1.0',
+          'Accept': 'application/json',
+        },
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      throw new Error(`iTunes RSS error (${response.status}): ${response.statusText} - ${errorText}`);
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        lastError = new Error(`iTunes RSS error (${response.status}): ${response.statusText} - ${errorText}`);
+        continue; // Try next URL
+      }
+
+      const data = (await response.json()) as iTunesRSSResponse;
+      
+      if (!data.feed || !data.feed.results || data.feed.results.length === 0) {
+        lastError = new Error('iTunes RSS returned empty results');
+        continue; // Try next URL
+      }
+
+      const items: iTunesAlbumItem[] = (data.feed?.results || [])
+        .map((album, idx) => ({
+          rank: idx + 1,
+          title: album.name,
+          artist: album.artistName,
+          coverUrl: album.artworkUrl100,
+          appleMusicLink: album.url,
+          releaseDate: (album as iTunesRSSAlbumItem).releaseDate ?? null,
+        }))
+        .filter((x) => x.title && x.artist && x.coverUrl && x.appleMusicLink);
+
+      cacheSet(cacheKey, items, ttl);
+      return items;
+    } catch (error) {
+      console.error(`Error fetching from ${url}:`, error);
+      lastError = error as Error;
+      continue; // Try next URL
     }
-
-    const data = (await response.json()) as iTunesRSSResponse;
-    
-    if (!data.feed || !data.feed.results || data.feed.results.length === 0) {
-      throw new Error('iTunes RSS returned empty results');
-    }
-
-    const items: iTunesAlbumItem[] = (data.feed?.results || [])
-      .map((album, idx) => ({
-        rank: idx + 1,
-        title: album.name,
-        artist: album.artistName,
-        coverUrl: album.artworkUrl100,
-        appleMusicLink: album.url,
-        releaseDate: (album as iTunesRSSAlbumItem).releaseDate ?? null,
-      }))
-      .filter((x) => x.title && x.artist && x.coverUrl && x.appleMusicLink);
-
-    cacheSet(cacheKey, items, ttl);
-    return items;
-  } catch (error) {
-    console.error("Error fetching iTunes new releases:", error);
-    throw error;
   }
+  
+  // If all URLs failed, throw the last error
+  if (lastError) {
+    console.error("All iTunes RSS endpoints failed for", country);
+    throw lastError;
+  }
+  
+  throw new Error("No valid iTunes RSS endpoint found");
 }

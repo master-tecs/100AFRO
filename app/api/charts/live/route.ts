@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getNewReleases, getTopSongs } from "@/lib/itunes";
 
 export const runtime = "nodejs";
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 function parseCountry(v: string | null): "NG" | "GH" | "ZA" {
   if (v === "GH" || v === "ZA" || v === "NG") return v;
