@@ -25,7 +25,7 @@ export default function TruncatedTitle({
   const [expanded, setExpanded] = useState(false);
   const [needsTruncation, setNeedsTruncation] = useState(false);
   const [showTooltipState, setShowTooltipState] = useState(false);
-  const titleRef = useRef<HTMLElement>(null);
+  const titleRef = useRef<HTMLHeadingElement | HTMLDivElement | HTMLSpanElement | HTMLParagraphElement>(null);
   const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -90,32 +90,36 @@ export default function TruncatedTitle({
     setShowTooltipState(false);
   };
 
-  const WrapperComponent = as as keyof JSX.IntrinsicElements;
   const lineClampClass = expanded ? "" : `line-clamp-${maxLines}`;
   const baseClasses = `transition-all duration-300 ${lineClampClass} ${className}`.trim();
 
+  const commonProps = {
+    className: baseClasses,
+    onMouseEnter: handleMouseEnter,
+    onMouseLeave: handleMouseLeave,
+    style: {
+      cursor: showExpand && needsTruncation ? "pointer" : linkHref ? "pointer" : "default",
+    } as React.CSSProperties,
+    "aria-expanded": expanded,
+    "aria-label": needsTruncation
+      ? expanded
+        ? "Click to collapse title"
+        : "Click to expand title"
+      : undefined,
+    onClick: linkHref ? undefined : handleExpandClick,
+  };
+
   const titleContent = (
     <>
-      <WrapperComponent
-        ref={titleRef as any}
-        className={baseClasses}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        style={{
-          cursor: showExpand && needsTruncation ? "pointer" : linkHref ? "pointer" : "default",
-        }}
-        aria-expanded={expanded}
-        aria-label={
-          needsTruncation
-            ? expanded
-              ? "Click to collapse title"
-              : "Click to expand title"
-            : undefined
-        }
-        onClick={linkHref ? undefined : handleExpandClick}
-      >
-        {title}
-      </WrapperComponent>
+      {as === "h1" && <h1 {...commonProps} ref={titleRef as React.Ref<HTMLHeadingElement>}>{title}</h1>}
+      {as === "h2" && <h2 {...commonProps} ref={titleRef as React.Ref<HTMLHeadingElement>}>{title}</h2>}
+      {as === "h3" && <h3 {...commonProps} ref={titleRef as React.Ref<HTMLHeadingElement>}>{title}</h3>}
+      {as === "h4" && <h4 {...commonProps} ref={titleRef as React.Ref<HTMLHeadingElement>}>{title}</h4>}
+      {as === "h5" && <h5 {...commonProps} ref={titleRef as React.Ref<HTMLHeadingElement>}>{title}</h5>}
+      {as === "h6" && <h6 {...commonProps} ref={titleRef as React.Ref<HTMLHeadingElement>}>{title}</h6>}
+      {as === "span" && <span {...commonProps} ref={titleRef as React.Ref<HTMLSpanElement>}>{title}</span>}
+      {as === "div" && <div {...commonProps} ref={titleRef as React.Ref<HTMLDivElement>}>{title}</div>}
+      {as === "p" && <p {...commonProps} ref={titleRef as React.Ref<HTMLParagraphElement>}>{title}</p>}
       {showExpand && needsTruncation && (
         <button
           onClick={handleExpandClick}
