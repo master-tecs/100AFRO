@@ -11,6 +11,10 @@ interface VideoFiltersProps {
 const CATEGORIES: { value: VideoCategory | "ALL"; label: string }[] = [
   { value: "ALL", label: "All Videos" },
   { value: "Music_Video", label: "Music Videos" },
+  { value: "Music", label: "Music" },
+  { value: "Movie", label: "Movies" },
+  { value: "Series", label: "Series" },
+  { value: "BTS", label: "Behind the Scenes" },
   { value: "Dance", label: "Dance" },
   { value: "Interview", label: "Interviews" },
   { value: "Vlog", label: "Vlogs" },

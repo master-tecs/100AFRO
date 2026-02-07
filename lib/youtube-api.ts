@@ -3,6 +3,8 @@
  * Handles fetching videos from @100AFRO channel and syncing to database
  */
 
+import { detectVideoCategory } from './video-categorizer';
+
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
 const CHANNEL_HANDLE = '@100AFRO';
 
@@ -192,8 +194,7 @@ export async function fetchChannelVideos(
  * Convert YouTube video to database format
  */
 export function youtubeVideoToDbFormat(
-  video: YouTubeVideo,
-  category: string = 'Music_Video'
+  video: YouTubeVideo
 ): {
   youtubeId: string;
   title: string;
@@ -203,6 +204,7 @@ export function youtubeVideoToDbFormat(
   date: string;
   publishedAt: Date;
   category: string;
+  description: string;
 } {
   // Format date (e.g., "2 weeks ago" or "Jan 15, 2024")
   const publishedDate = new Date(video.publishedAt);
@@ -231,6 +233,9 @@ export function youtubeVideoToDbFormat(
     });
   }
 
+  // Auto-detect category from title and description
+  const detectedCategory = detectVideoCategory(video.title, video.description);
+
   return {
     youtubeId: video.youtubeId,
     title: video.title,
@@ -239,6 +244,7 @@ export function youtubeVideoToDbFormat(
     views: formatViews(video.views),
     date: dateStr,
     publishedAt: publishedDate,
-    category,
+    category: detectedCategory,
+    description: video.description,
   };
 }

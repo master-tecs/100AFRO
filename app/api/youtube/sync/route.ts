@@ -88,15 +88,21 @@ export async function POST(request: NextRequest) {
 
         if (existing) {
           // Update existing video
-          // Try to include publishedAt if the field exists
+          // Only update category if it's still Music_Video (likely auto-assigned)
+          // This preserves manually set categories
           const updateData: any = {
             title: dbData.title,
             thumbnailUrl: dbData.thumbnailUrl,
             duration: dbData.duration,
             views: dbData.views,
             date: dbData.date,
-            // Don't update category if manually set
           };
+
+          // Update category only if it's still the default (Music_Video)
+          // This means it was likely auto-assigned and can be updated with better detection
+          if (existing.category === 'Music_Video') {
+            updateData.category = dbData.category;
+          }
           
           // Only include publishedAt if the field exists in the schema
           try {
@@ -120,7 +126,7 @@ export async function POST(request: NextRequest) {
           }
           updated++;
         } else {
-          // Create new video
+          // Create new video with auto-detected category
           // Try to include publishedAt if the field exists
           const createData: any = {
             youtubeId: dbData.youtubeId,
@@ -129,7 +135,7 @@ export async function POST(request: NextRequest) {
             duration: dbData.duration,
             views: dbData.views,
             date: dbData.date,
-            category: dbData.category as any, // Default category
+            category: dbData.category as any, // Auto-detected category
             tags: [],
           };
           

@@ -358,10 +358,14 @@ enum BlogCategory {
 
 enum VideoCategory {
   Music_Video
+  Music
   Dance
   Interview
   Vlog
   Performance
+  Movie
+  Series
+  BTS
 }
 
 enum ChartTrend {

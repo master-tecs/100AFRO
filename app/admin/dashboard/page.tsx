@@ -29,6 +29,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import TruncatedTitle from "../../components/TruncatedTitle";
+import { VideoCategory } from "@prisma/client";
 
 type BlogCategory = "Music" | "Culture" | "Lifestyle" | "News" | "Industry";
 type PostStatus = "DRAFT" | "IN_REVIEW" | "PUBLISHED" | "ARCHIVED";
@@ -96,6 +97,9 @@ export default function AdminDashboard() {
   const [postToDelete, setPostToDelete] = useState<BlogPost | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [syncingVideos, setSyncingVideos] = useState(false);
+  const [videos, setVideos] = useState<any[]>([]);
+  const [videosLoading, setVideosLoading] = useState(false);
+  const [updatingVideoId, setUpdatingVideoId] = useState<string | null>(null);
 
   // Polls (Admin)
   const [pollsLoading, setPollsLoading] = useState(false);
@@ -431,6 +435,54 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchVideos = async () => {
+    setVideosLoading(true);
+    try {
+      const res = await fetch("/api/videos?limit=100");
+      if (!res.ok) {
+        throw new Error("Failed to fetch videos");
+      }
+      const data = await res.json();
+      setVideos(data.videos || []);
+    } catch (error: any) {
+      console.error("Error fetching videos:", error);
+      showToast("error", "Failed to fetch videos");
+    } finally {
+      setVideosLoading(false);
+    }
+  };
+
+  const updateVideoCategory = async (videoId: string, category: string) => {
+    setUpdatingVideoId(videoId);
+    try {
+      const res = await fetch(`/api/admin/videos/${videoId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast("error", err.error || "Failed to update video category");
+        return;
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        // Update local state
+        setVideos((prev) =>
+          prev.map((v) => (v.id === videoId ? { ...v, category } : v))
+        );
+        showToast("success", "Video category updated");
+      }
+    } catch (error: any) {
+      console.error("Error updating video:", error);
+      showToast("error", "Failed to update video category");
+    } finally {
+      setUpdatingVideoId(null);
+    }
+  };
+
   const syncYouTubeVideos = async () => {
     setSyncingVideos(true);
     try {
@@ -450,10 +502,8 @@ export default function AdminDashboard() {
         const message = `Successfully synced ${stats.fetched || 0} videos: ${stats.created || 0} created, ${stats.updated || 0} updated`;
         showToast("success", message);
         
-        // Refresh the page after a short delay to show the updated state
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
+        // Refresh videos list
+        await fetchVideos();
       } else {
         showToast("error", data.message || "Sync completed with errors");
       }
@@ -475,6 +525,13 @@ export default function AdminDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
+  // Fetch videos when Videos tab is active
+  useEffect(() => {
+    if (activeTab === "videos" && videos.length === 0 && !videosLoading) {
+      fetchVideos();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const handleEdit = (post: BlogPost) => {
     router.push(`/admin/posts/${post.id}/edit`);
@@ -1487,11 +1544,132 @@ export default function AdminDashboard() {
                   <p className="text-white font-medium mb-2">Syncing videos from YouTube...</p>
                   <p className="text-gray-400 text-sm">This may take a few moments. Please wait...</p>
                 </div>
+              ) : videosLoading ? (
+                <div className="text-center py-12">
+                  <div className="w-8 h-8 border-2 border-afro-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                  <p className="text-gray-400">Loading videos...</p>
+                </div>
+              ) : videos.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-white">
+                      Videos ({videos.length})
+                    </h3>
+                    <Link
+                      href="/videos"
+                      target="_blank"
+                      className="text-afro-primary hover:underline text-sm inline-flex items-center gap-1"
+                    >
+                      View Public Page <ExternalLink size={14} />
+                    </Link>
+                  </div>
+
+                  {/* Desktop Table View */}
+                  <div className="hidden lg:block overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-700">
+                          <th className="text-left py-3 px-4 text-gray-400 text-sm font-semibold">Thumbnail</th>
+                          <th className="text-left py-3 px-4 text-gray-400 text-sm font-semibold">Title</th>
+                          <th className="text-left py-3 px-4 text-gray-400 text-sm font-semibold">Category</th>
+                          <th className="text-left py-3 px-4 text-gray-400 text-sm font-semibold">Views</th>
+                          <th className="text-left py-3 px-4 text-gray-400 text-sm font-semibold">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {videos.map((video) => (
+                          <tr
+                            key={video.id}
+                            className="border-b border-gray-800 hover:bg-gray-800/50 transition-colors"
+                          >
+                            <td className="py-3 px-4">
+                              <img
+                                src={video.thumbnailUrl || `https://img.youtube.com/vi/${video.youtubeId}/hqdefault.jpg`}
+                                alt={video.title}
+                                className="w-20 h-12 object-cover rounded"
+                              />
+                            </td>
+                            <td className="py-3 px-4">
+                              <TruncatedTitle
+                                title={video.title}
+                                as="span"
+                                className="text-white text-sm"
+                                maxLines={2}
+                                showExpand={false}
+                              />
+                            </td>
+                            <td className="py-3 px-4">
+                              <select
+                                value={video.category}
+                                onChange={(e) => updateVideoCategory(video.id, e.target.value)}
+                                disabled={updatingVideoId === video.id}
+                                className="bg-gray-800 border border-gray-700 text-white text-sm rounded px-3 py-1.5 focus:outline-none focus:border-afro-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {(Object.values(VideoCategory) as VideoCategory[]).map((cat: VideoCategory) => (
+                                  <option key={cat} value={cat}>
+                                    {cat.replace('_', ' ')}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="py-3 px-4 text-gray-400 text-sm">{video.views}</td>
+                            <td className="py-3 px-4 text-gray-400 text-sm">{video.date}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Card View */}
+                  <div className="lg:hidden space-y-4">
+                    {videos.map((video) => (
+                      <div
+                        key={video.id}
+                        className="bg-gray-800 border border-gray-700 rounded-lg p-4"
+                      >
+                        <div className="flex gap-4">
+                          <img
+                            src={video.thumbnailUrl || `https://img.youtube.com/vi/${video.youtubeId}/hqdefault.jpg`}
+                            alt={video.title}
+                            className="w-24 h-16 object-cover rounded flex-shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <TruncatedTitle
+                              title={video.title}
+                              as="h4"
+                              className="text-white font-bold text-sm mb-2"
+                              maxLines={2}
+                            />
+                            <div className="mt-3">
+                              <label className="block text-xs text-gray-400 mb-1">Category</label>
+                              <select
+                                value={video.category}
+                                onChange={(e) => updateVideoCategory(video.id, e.target.value)}
+                                disabled={updatingVideoId === video.id}
+                                className="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded px-3 py-2 focus:outline-none focus:border-afro-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {(Object.values(VideoCategory) as VideoCategory[]).map((cat: VideoCategory) => (
+                                  <option key={cat} value={cat}>
+                                    {cat.replace('_', ' ')}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
+                              <span>{video.views} views</span>
+                              <span>{video.date}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               ) : (
                 <div className="text-center py-8">
                   <VideoIcon className="mx-auto text-gray-600 mb-4" size={48} />
                   <p className="text-gray-400 font-medium mb-2">
-                    Click 'Sync from YouTube' to import videos from your channel
+                    No videos yet. Click 'Sync from YouTube' to import videos from your channel
                   </p>
                   <Link
                     href="/videos"
