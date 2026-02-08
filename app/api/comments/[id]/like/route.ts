@@ -23,7 +23,6 @@ export async function POST(
       windowMs: 60_000, // 1 minute
       max: 20, // 20 likes per minute
       keyPrefix: 'comments:like',
-      key: request.ip || 'anonymous',
     });
 
     if (!rl.ok) {
