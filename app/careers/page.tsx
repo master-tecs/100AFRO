@@ -307,7 +307,7 @@ export default function CareersPage() {
                     </div>
                     <div className="lg:ml-4">
                       <a
-                        href={`mailto:careers@contact.100afro.com?subject=Application for ${job.title}`}
+                        href={`mailto:careers@100afro.com?subject=Application for ${job.title}`}
                         className="inline-flex items-center gap-2 px-6 py-3 bg-afro-primary text-black font-bold rounded-lg hover:bg-white transition-colors whitespace-nowrap"
                       >
                         Apply Now
@@ -353,7 +353,7 @@ export default function CareersPage() {
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <a
-                href="mailto:careers@contact.100afro.com?subject=General Application"
+                href="mailto:careers@100afro.com?subject=General Application"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-afro-primary text-black font-bold rounded-lg hover:bg-white transition-colors"
               >
                 Send General Application

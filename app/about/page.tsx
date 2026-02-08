@@ -299,20 +299,20 @@ export default function AboutPage() {
             <div className="bg-gray-900 rounded-lg p-6 space-y-4">
               <div>
                 <p className="text-sm text-gray-400 font-bold mb-1">General Inquiries:</p>
-                <a href="mailto:info@contact.100afro.com" className="text-afro-primary hover:underline">
-                  info@contact.100afro.com
+                <a href="mailto:info@100afro.com" className="text-afro-primary hover:underline">
+                  info@100afro.com
                 </a>
               </div>
               <div>
                 <p className="text-sm text-gray-400 font-bold mb-1">Media & Press:</p>
-                <a href="mailto:press@contact.100afro.com" className="text-afro-primary hover:underline">
-                  press@contact.100afro.com
+                <a href="mailto:press@100afro.com" className="text-afro-primary hover:underline">
+                  press@100afro.com
                 </a>
               </div>
               <div>
                 <p className="text-sm text-gray-400 font-bold mb-1">Partnerships:</p>
-                <a href="mailto:partnerships@contact.100afro.com" className="text-afro-primary hover:underline">
-                  partnerships@contact.100afro.com
+                <a href="mailto:partnerships@100afro.com" className="text-afro-primary hover:underline">
+                  partnerships@100afro.com
                 </a>
               </div>
               <div>

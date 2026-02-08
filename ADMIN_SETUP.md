@@ -11,7 +11,7 @@
 
 1. **Login**: Go to `http://localhost:3000/admin/login`
 2. **Credentials**: 
-   - Email: `admin@contact.100afro.com` (or any user with ADMIN role)
+   - Email: `admin@100afro.com` (or any user with ADMIN role)
    - Password: Currently, password verification is not implemented. Any admin user can login with just their email.
 
 ## Features
@@ -60,7 +60,7 @@ npx prisma migrate dev --name add_password_field
 
 ## Creating Admin Users
 
-The admin user `admin@contact.100afro.com` was created during seeding. To create more admin users:
+The admin user `admin@100afro.com` was created during seeding. To create more admin users:
 
 1. Use Prisma Studio:
 ```bash

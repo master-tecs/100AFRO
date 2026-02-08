@@ -68,13 +68,13 @@ async function main() {
 
   // Create default admin user
   const adminUser = await prisma.user.upsert({
-    where: { email: "admin@contact.100afro.com" },
+    where: { email: "admin@100afro.com" },
     update: {
       password: adminPassword,
       passwordSalt: adminSalt,
     },
     create: {
-      email: "admin@contact.100afro.com",
+      email: "admin@100afro.com",
       name: "Admin User",
       password: adminPassword,
       passwordSalt: adminSalt,
@@ -85,7 +85,7 @@ async function main() {
   // Create author users from blog posts
   const authorEmails = new Set(
     BLOG_POSTS.map(
-      (post) => post.author.toLowerCase().replace(/\s+/g, ".") + "@contact.100afro.com"
+      (post) => post.author.toLowerCase().replace(/\s+/g, ".") + "@100afro.com"
     )
   );
   const authorMap = new Map<string, string>();

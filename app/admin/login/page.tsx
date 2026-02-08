@@ -88,7 +88,7 @@ export default function AdminLogin() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-gray-950 border border-gray-700 rounded-xl py-3 pl-10 pr-4 text-white focus:outline-none focus:border-afro-primary focus:ring-1 focus:ring-afro-primary transition-all"
-                  placeholder="admin@contact.100afro.com"
+                  placeholder="admin@100afro.com"
                 />
               </div>
             </div>

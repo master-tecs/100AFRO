@@ -24,7 +24,7 @@ function sleep(ms: number) {
 function userAgent() {
   return (
     process.env.MUSICBRAINZ_USER_AGENT ||
-    "100AFRO/1.0 (admin@contact.100afro.com)"
+    "100AFRO/1.0 (admin@100afro.com)"
   );
 }
 

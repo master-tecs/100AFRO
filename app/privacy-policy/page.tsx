@@ -274,8 +274,8 @@ export default function PrivacyPolicyPage() {
             <div className="bg-gray-900 rounded-lg p-6 space-y-4">
               <div>
                 <p className="text-sm text-gray-400 font-bold mb-1">Email:</p>
-                <a href="mailto:privacy@contact.100afro.com" className="text-afro-primary hover:underline text-lg">
-                  privacy@contact.100afro.com
+                <a href="mailto:privacy@100afro.com" className="text-afro-primary hover:underline text-lg">
+                  privacy@100afro.com
                 </a>
               </div>
               <div>

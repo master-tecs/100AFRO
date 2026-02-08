@@ -319,8 +319,8 @@ export default function TermsOfServicePage() {
             <div className="bg-gray-900 rounded-lg p-6 space-y-4">
               <div>
                 <p className="text-sm text-gray-400 font-bold mb-1">Email:</p>
-                <a href="mailto:legal@contact.100afro.com" className="text-afro-primary hover:underline text-lg">
-                  legal@contact.100afro.com
+                <a href="mailto:legal@100afro.com" className="text-afro-primary hover:underline text-lg">
+                  legal@100afro.com
                 </a>
               </div>
               <div>

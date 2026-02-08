@@ -69,7 +69,7 @@ LIMIT ${limit}
   const res = await fetch(url, {
     headers: {
       // Wikidata prefers a descriptive UA; keep it simple here.
-      "User-Agent": process.env.WIKIDATA_USER_AGENT || "100AFRO/1.0 (contact: admin@contact.100afro.com)",
+      "User-Agent": process.env.WIKIDATA_USER_AGENT || "100AFRO/1.0 (contact: admin@100afro.com)",
       Accept: "application/sparql-results+json",
     },
     // cache at our layer

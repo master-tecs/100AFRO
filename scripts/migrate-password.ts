@@ -23,7 +23,7 @@ async function migratePasswords() {
       // This is a bcrypt hash - we need to reset it
       // In production, you would ask users to reset their passwords
       // For now, we'll set a temporary password that matches the seed
-      if (user.email === 'admin@contact.100afro.com') {
+      if (user.email === 'admin@100afro.com') {
         const { hash, salt } = await hashPassword('12345678');
         await prisma.user.update({
           where: { id: user.id },

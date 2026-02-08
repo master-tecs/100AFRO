@@ -66,12 +66,12 @@ CLOUDINARY_API_SECRET="your-api-secret"
 # Used by /api/admin/daily-fact/refresh for cron automation
 DAILY_FACT_REFRESH_SECRET=""
 # Optional but recommended user agents (some public APIs expect this)
-WIKIDATA_USER_AGENT="100AFRO/1.0 (admin@contact.100afro.com)"
-MUSICBRAINZ_USER_AGENT="100AFRO/1.0 (admin@contact.100afro.com)"
+WIKIDATA_USER_AGENT="100AFRO/1.0 (admin@100afro.com)"
+MUSICBRAINZ_USER_AGENT="100AFRO/1.0 (admin@100afro.com)"
 
 # Email Service (Resend) - Required for newsletter functionality
 RESEND_API_KEY="re_your-resend-api-key"
-RESEND_FROM_EMAIL="100AFRO <newsletter@contact.100afro.com>" # Optional, defaults to newsletter@contact.100afro.com
+RESEND_FROM_EMAIL="100AFRO <newsletter@100afro.com>" # Optional, defaults to newsletter@100afro.com
 NEXT_PUBLIC_SITE_URL="http://localhost:3000" # Optional, defaults to NEXTAUTH_URL or localhost:3000
 
 # OAuth Providers (optional)

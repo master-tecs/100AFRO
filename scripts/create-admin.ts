@@ -35,7 +35,7 @@ async function hashPasswordEdge(
 }
 
 async function createAdmin() {
-  const email = process.env.ADMIN_EMAIL || "admin@contact.100afro.com";
+  const email = process.env.ADMIN_EMAIL || "admin@100afro.com";
   const password = process.env.ADMIN_PASSWORD || "admin123";
   const name = process.env.ADMIN_NAME || "Admin User";
 
