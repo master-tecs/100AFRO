@@ -223,8 +223,8 @@ export default function CookiePolicyPage() {
             <div className="bg-gray-900 rounded-lg p-4">
               <p className="text-gray-300">
                 <strong>Email:</strong>{' '}
-                <a href="mailto:privacy@100afro.com" className="text-afro-primary hover:underline">
-                  privacy@100afro.com
+                <a href="mailto:privacy@contact.100afro.com" className="text-afro-primary hover:underline">
+                  privacy@contact.100afro.com
                 </a>
               </p>
               <p className="text-gray-300 mt-2">

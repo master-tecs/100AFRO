@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
         // Bcrypt hash - Edge Runtime cannot verify bcrypt
         // For existing bcrypt passwords, we need to migrate them
         // Temporary: Allow login for seed password during migration period
-        if (password === '12345678' && email === 'admin@100afro.com') {
+        if (password === '12345678' && email === 'admin@contact.100afro.com') {
           // This is a temporary workaround for existing seed data
           // Run the migration script to convert to Edge-compatible format
           isValid = true;
