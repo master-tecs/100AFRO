@@ -11,14 +11,15 @@ export default function ConditionalLayout({
 }) {
   const pathname = usePathname()
   const isAdminPage = pathname?.startsWith('/admin')
+  const isEditorPage = pathname?.startsWith('/editor')
 
   return (
     <>
-      {!isAdminPage && <Header />}
+      {!isAdminPage && !isEditorPage && <Header />}
       <main className="flex-grow">
         {children}
       </main>
-      {!isAdminPage && <Footer />}
+      {!isAdminPage && !isEditorPage && <Footer />}
     </>
   )
 }

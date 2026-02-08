@@ -30,6 +30,10 @@ import {
 } from "lucide-react";
 import TruncatedTitle from "../../components/TruncatedTitle";
 import { VideoCategory } from "@prisma/client";
+import UserManagement from "../../components/UserManagement";
+import CreateUserModal from "../../components/CreateUserModal";
+import EditUserModal from "../../components/EditUserModal";
+import ProfileSettings from "../../components/ProfileSettings";
 
 type BlogCategory = "Music" | "Culture" | "Lifestyle" | "News" | "Industry";
 type PostStatus = "DRAFT" | "IN_REVIEW" | "PUBLISHED" | "ARCHIVED";
@@ -68,10 +72,14 @@ export default function AdminDashboard() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<
-    "posts" | "comments" | "stats" | "videos" | "polls"
+    "posts" | "comments" | "stats" | "videos" | "polls" | "users" | "settings"
   >(
     "posts"
   );
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
+  const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
+  const [usersRefreshTrigger, setUsersRefreshTrigger] = useState(0);
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -819,7 +827,24 @@ export default function AdminDashboard() {
             </button>
           )}
           <div className="h-px bg-gray-800 my-4 mx-2"></div>
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-gray-400 hover:bg-gray-800 hover:text-white transition-all">
+          <button
+            onClick={() => setActiveTab("users")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${
+              activeTab === "users"
+                ? "bg-afro-primary text-black"
+                : "text-gray-400 hover:bg-gray-800 hover:text-white"
+            }`}
+          >
+            <Users size={20} /> Users
+          </button>
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${
+              activeTab === "settings"
+                ? "bg-afro-primary text-black"
+                : "text-gray-400 hover:bg-gray-800 hover:text-white"
+            }`}
+          >
             <Settings size={20} /> Settings
           </button>
         </nav>
@@ -2012,6 +2037,28 @@ export default function AdminDashboard() {
         </div>
       )}
 
+          {/* Users Tab */}
+          {activeTab === "users" && user.role === "ADMIN" && (
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+              <UserManagement
+                onCreateUser={() => setIsCreateUserModalOpen(true)}
+                onEditUser={(user) => {
+                  setEditingUser(user);
+                  setIsEditUserModalOpen(true);
+                }}
+                refreshTrigger={usersRefreshTrigger}
+              />
+            </div>
+          )}
+
+          {/* Settings Tab */}
+          {activeTab === "settings" && (
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+              <h2 className="text-2xl font-bold text-white mb-6">Profile Settings</h2>
+              <ProfileSettings />
+            </div>
+          )}
+
       {/* Modal removed - using dedicated pages at /admin/posts/new and /admin/posts/[id]/edit */}
 
       {/* Revisions Modal */}
@@ -2092,6 +2139,33 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* Create User Modal */}
+      <CreateUserModal
+        isOpen={isCreateUserModalOpen}
+        onClose={() => setIsCreateUserModalOpen(false)}
+        onSuccess={() => {
+          setIsCreateUserModalOpen(false);
+          showToast("success", "User created successfully");
+          setUsersRefreshTrigger((prev) => prev + 1);
+        }}
+      />
+
+      {/* Edit User Modal */}
+      <EditUserModal
+        isOpen={isEditUserModalOpen}
+        user={editingUser}
+        onClose={() => {
+          setIsEditUserModalOpen(false);
+          setEditingUser(null);
+        }}
+        onSuccess={() => {
+          setIsEditUserModalOpen(false);
+          setEditingUser(null);
+          showToast("success", "User updated successfully");
+          setUsersRefreshTrigger((prev) => prev + 1);
+        }}
+      />
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmOpen && postToDelete && (

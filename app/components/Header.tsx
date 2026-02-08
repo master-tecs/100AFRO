@@ -1,20 +1,25 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/use-auth';
-import { Menu, X, Youtube, Search, ArrowRight, Shield } from 'lucide-react';
+import { Menu, X, Youtube, Search } from 'lucide-react';
+import UserAvatar from './UserAvatar';
 
 const Header: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const pathname = usePathname();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const profileMenuRef = useRef<HTMLDivElement>(null);
   const isAdmin = user?.role === 'ADMIN';
+  const isAuthor = user?.role === 'AUTHOR';
+  const isEditor = isAdmin || isAuthor;
 
   const toggleMenu = () => setIsOpen(!isOpen);
   const toggleSearch = () => {
@@ -27,9 +32,31 @@ const Header: React.FC = () => {
     }
   };
 
+  // Close profile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+
+    if (isProfileMenuOpen) {
+      // Use setTimeout to delay attaching listener, allowing current click to complete
+      const timer = setTimeout(() => {
+        document.addEventListener('click', handleClickOutside);
+      }, 0);
+      
+      return () => {
+        clearTimeout(timer);
+        document.removeEventListener('click', handleClickOutside);
+      };
+    }
+  }, [isProfileMenuOpen]);
+
   useEffect(() => {
     setIsOpen(false);
     setIsSearchOpen(false);
+    setIsProfileMenuOpen(false);
     document.body.style.overflow = 'auto';
   }, [pathname]);
 
@@ -41,6 +68,11 @@ const Header: React.FC = () => {
     }
   };
 
+  const handleLogout = async () => {
+    setIsProfileMenuOpen(false);
+    await logout();
+  };
+
   const isActive = (path: string) => pathname === path;
 
   const navLinks = [
@@ -50,9 +82,6 @@ const Header: React.FC = () => {
     { name: 'Blog', path: '/blog' },
     { name: 'About', path: '/about' },
   ];
-
-  // Note: Search preview will be handled via API in the search page
-  const hasResults = false; // Will be replaced with API call
 
   return (
     <>
@@ -71,7 +100,7 @@ const Header: React.FC = () => {
                   priority
                 />
               </div>
-              <div className="relative">
+              <div className="relative hidden sm:block">
                 <span className="font-display font-bold text-3xl text-white tracking-tighter">
                   100<span className="text-afro-primary">AFRO</span>
                 </span>
@@ -80,7 +109,7 @@ const Header: React.FC = () => {
             </Link>
 
             {/* Desktop Nav */}
-            <nav className="hidden md:flex space-x-8 items-center">
+            <nav className="hidden lg:flex items-center gap-6">
               {navLinks.map((link) => (
                 <Link
                   key={link.name}
@@ -103,47 +132,209 @@ const Header: React.FC = () => {
                 <Search size={20} />
               </button>
 
-              {isAdmin && (
-                <Link
-                  href="/admin/dashboard"
-                  className="bg-afro-primary hover:bg-white text-black px-4 py-2 rounded-full font-bold flex items-center gap-2 transition-all text-sm uppercase tracking-wide"
-                >
-                  <Shield size={16} />
-                  Admin
-                </Link>
-              )}
+              {/* Profile Menu for Logged-in Users */}
+              {isEditor ? (
+                <div className="relative" ref={profileMenuRef}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsProfileMenuOpen(!isProfileMenuOpen);
+                    }}
+                    className="flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-afro-primary focus:ring-offset-2 focus:ring-offset-gray-900 rounded-full"
+                  >
+                    <UserAvatar 
+                      name={user?.name || user?.email} 
+                      image={(user as any)?.image || null} 
+                      size="sm" 
+                    />
+                  </button>
 
-              <a
-                href="https://youtube.com/@100AFRO"
-                target="_blank"
-                rel="noreferrer"
-                className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-full font-bold flex items-center gap-2 transition-transform hover:scale-105 text-sm uppercase tracking-wide"
-              >
-                <Youtube size={18} />
-                Subscribe
-              </a>
+                  {/* Dropdown Menu */}
+                  {isProfileMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-56 bg-gray-900 border border-gray-800 rounded-xl shadow-xl overflow-hidden z-[100]">
+                      <div className="p-4 border-b border-gray-800">
+                        <div className="text-white font-semibold">{user?.name || 'User'}</div>
+                        <div className="text-gray-400 text-sm">{user?.email}</div>
+                      </div>
+                      <div className="py-2">
+                        <a
+                          href={isAdmin ? "/admin/dashboard" : "/editor/dashboard"}
+                          onClick={() => setIsProfileMenuOpen(false)}
+                          className="block px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <span>{isAdmin ? 'Admin Dashboard' : 'Content Dashboard'}</span>
+                          </div>
+                        </a>
+                        <a
+                          href={isAdmin ? "/admin/dashboard?tab=settings" : "/editor/dashboard?tab=profile"}
+                          onClick={() => setIsProfileMenuOpen(false)}
+                          className="block px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            <span>Profile Settings</span>
+                          </div>
+                        </a>
+                        {isAdmin && (
+                          <a
+                            href="/admin/dashboard"
+                            onClick={() => setIsProfileMenuOpen(false)}
+                            className="block px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                              </svg>
+                              <span>Admin Panel</span>
+                            </div>
+                          </a>
+                        )}
+                      </div>
+                      <div className="border-t border-gray-800 py-2">
+                        <button
+                          type="button"
+                          onClick={handleLogout}
+                          className="w-full px-4 py-3 text-left text-red-400 hover:bg-gray-800 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            </svg>
+                            <span>Logout</span>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <a
+                  href="https://youtube.com/@100AFRO"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full font-bold flex items-center gap-2 transition-transform hover:scale-105 text-sm uppercase tracking-wide"
+                >
+                  <Youtube size={18} />
+                  <span className="hidden xl:inline">Subscribe</span>
+                </a>
+              )}
             </nav>
 
-            {/* Mobile Menu Button */}
-            <div className="md:hidden flex items-center gap-4">
-              {isAdmin && (
-                <Link
-                  href="/admin/dashboard"
-                  className="bg-afro-primary text-black px-3 py-1.5 rounded-full font-bold flex items-center gap-1 text-xs uppercase"
-                >
-                  <Shield size={14} />
-                  Admin
-                </Link>
-              )}
+            {/* Tablet/Mobile Menu Button */}
+            <div className="lg:hidden flex items-center gap-3">
               <button 
                 onClick={toggleSearch}
-                className="text-gray-300 hover:text-white p-1"
+                className="text-gray-300 hover:text-white p-2"
+                aria-label="Search"
               >
-                <Search size={24} />
+                <Search size={22} />
               </button>
+              
+              {/* Profile Menu for Mobile/Tablet */}
+              {isEditor ? (
+                <div className="relative" ref={profileMenuRef}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsProfileMenuOpen(!isProfileMenuOpen);
+                    }}
+                    className="flex items-center focus:outline-none focus:ring-2 focus:ring-afro-primary focus:ring-offset-2 focus:ring-offset-gray-900 rounded-full"
+                  >
+                    <UserAvatar 
+                      name={user?.name || user?.email} 
+                      image={(user as any)?.image || null} 
+                      size="sm" 
+                    />
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {isProfileMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-56 bg-gray-900 border border-gray-800 rounded-xl shadow-xl overflow-hidden z-[100]">
+                      <div className="p-4 border-b border-gray-800">
+                        <div className="text-white font-semibold">{user?.name || 'User'}</div>
+                        <div className="text-gray-400 text-sm">{user?.email}</div>
+                      </div>
+                      <div className="py-2">
+                        <a
+                          href={isAdmin ? "/admin/dashboard" : "/editor/dashboard"}
+                          onClick={() => setIsProfileMenuOpen(false)}
+                          className="block px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <span>{isAdmin ? 'Admin Dashboard' : 'Content Dashboard'}</span>
+                          </div>
+                        </a>
+                        <a
+                          href={isAdmin ? "/admin/dashboard?tab=settings" : "/editor/dashboard?tab=profile"}
+                          onClick={() => setIsProfileMenuOpen(false)}
+                          className="block px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            <span>Profile Settings</span>
+                          </div>
+                        </a>
+                        {isAdmin && (
+                          <a
+                            href="/admin/dashboard"
+                            onClick={() => setIsProfileMenuOpen(false)}
+                            className="block px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                              </svg>
+                              <span>Admin Panel</span>
+                            </div>
+                          </a>
+                        )}
+                      </div>
+                      <div className="border-t border-gray-800 py-2">
+                        <button
+                          type="button"
+                          onClick={handleLogout}
+                          className="w-full px-4 py-3 text-left text-red-400 hover:bg-gray-800 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            </svg>
+                            <span>Logout</span>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <a
+                  href="https://youtube.com/@100AFRO"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-full font-bold flex items-center gap-1 text-xs uppercase"
+                >
+                  <Youtube size={16} />
+                  <span className="hidden sm:inline">Subscribe</span>
+                </a>
+              )}
+
               <button
                 onClick={toggleMenu}
                 className="text-gray-300 hover:text-white focus:outline-none p-1"
+                aria-label="Menu"
               >
                 {isOpen ? <X size={28} /> : <Menu size={28} />}
               </button>
@@ -153,7 +344,7 @@ const Header: React.FC = () => {
 
         {/* Mobile Menu */}
         {isOpen && (
-          <div className="md:hidden bg-gray-900 border-b border-gray-800 animate-in slide-in-from-top-5 absolute w-full left-0 top-20 h-screen z-40">
+          <div className="lg:hidden bg-gray-900 border-b border-gray-800 animate-in slide-in-from-top-5 absolute w-full left-0 top-20 h-[calc(100vh-5rem)] z-40 overflow-y-auto">
             <div className="px-4 pt-4 pb-12 space-y-2">
               {navLinks.map((link) => (
                 <Link
@@ -169,24 +360,29 @@ const Header: React.FC = () => {
                   {link.name}
                 </Link>
               ))}
-              {isAdmin && (
+              {isEditor && (
                 <Link
-                  href="/admin/dashboard"
+                  href={isAdmin ? "/admin/dashboard" : "/editor/dashboard"}
                   onClick={() => setIsOpen(false)}
                   className="block w-full text-center mt-4 bg-afro-primary hover:bg-white text-black px-4 py-4 rounded-xl font-bold uppercase tracking-widest"
                 >
-                  <Shield size={18} className="inline mr-2" />
-                  Admin Dashboard
+                  <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  {isAdmin ? "Admin Dashboard" : "Content Dashboard"}
                 </Link>
               )}
-              <a
-                href="https://youtube.com/@100AFRO"
-                target="_blank"
-                rel="noreferrer"
-                className="block w-full text-center mt-8 bg-red-600 hover:bg-red-700 text-white px-4 py-4 rounded-xl font-bold uppercase tracking-widest"
-              >
-                Subscribe on YouTube
-              </a>
+              {!isEditor && (
+                <a
+                  href="https://youtube.com/@100AFRO"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block w-full text-center mt-8 bg-red-600 hover:bg-red-700 text-white px-4 py-4 rounded-xl font-bold uppercase tracking-widest"
+                >
+                  <Youtube size={18} className="inline mr-2" />
+                  Subscribe on YouTube
+                </a>
+              )}
             </div>
           </div>
         )}
@@ -218,34 +414,16 @@ const Header: React.FC = () => {
 
             <div className="flex-grow overflow-y-auto custom-scrollbar">
               {searchQuery.length > 2 ? (
-                hasResults ? (
-                  <div className="text-center text-gray-500 py-12">
-                    <p className="text-xl">Searching...</p>
-                    <p className="text-sm mt-2">Results will appear here</p>
-                  </div>
-                ) : (
-                  <div className="text-center text-gray-500 py-12">
-                    <p className="text-xl">No results found for &quot;{searchQuery}&quot;</p>
-                    <p className="text-sm mt-2">Try checking for typos or using different keywords.</p>
-                  </div>
-                )
+                <div className="text-center text-gray-500 py-12">
+                  <p className="text-xl">No results found for &quot;{searchQuery}&quot;</p>
+                  <p className="text-sm mt-2">Try checking for typos or using different keywords.</p>
+                </div>
               ) : (
                 <div className="text-center text-gray-600 py-12">
                   <p>Start typing to search...</p>
                 </div>
               )}
             </div>
-            
-            {hasResults && (
-              <div className="mt-8 text-center pt-8 border-t border-gray-800">
-                <button 
-                  onClick={(e) => handleSearchSubmit(e)} 
-                  className="inline-flex items-center text-white hover:text-afro-primary transition-colors font-bold"
-                >
-                  View all results <ArrowRight size={20} className="ml-2" />
-                </button>
-              </div>
-            )}
           </div>
         </div>
       )}
@@ -254,4 +432,3 @@ const Header: React.FC = () => {
 };
 
 export default Header;
-

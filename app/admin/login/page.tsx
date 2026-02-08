@@ -32,7 +32,15 @@ export default function AdminLogin() {
         setError(data.error || 'Invalid credentials. Please try again.');
         setLoading(false);
       } else {
-        router.push('/admin/dashboard');
+        // Redirect based on user role
+        const userRole = data.user?.role;
+        if (userRole === 'ADMIN') {
+          router.push('/admin/dashboard');
+        } else if (userRole === 'AUTHOR') {
+          router.push('/editor/dashboard');
+        } else {
+          router.push('/admin/dashboard'); // Fallback
+        }
         router.refresh();
       }
     } catch (error) {

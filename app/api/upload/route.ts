@@ -4,10 +4,10 @@ import { uploadImage } from "@/lib/cloudinary";
 
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication
+    // Check authentication - allow ADMIN and AUTHOR
     const user = await getUser(request);
 
-    if (!user || user.role !== "ADMIN") {
+    if (!user || (user.role !== "ADMIN" && user.role !== "AUTHOR")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

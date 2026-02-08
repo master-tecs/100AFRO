@@ -59,10 +59,14 @@ export async function GET(request: NextRequest) {
     const q = searchParams.get("q") || "";
     const status = searchParams.get("status") as PostStatus | null;
     const includeArchived = searchParams.get("includeArchived") === "true";
+    const authorId = searchParams.get("authorId");
 
     const where: any = {};
     if (user.role === "AUTHOR") {
       where.authorId = user.id;
+    } else if (authorId && user.role === "ADMIN") {
+      // Admin can filter by specific author
+      where.authorId = authorId;
     }
     if (!includeArchived) {
       where.status = { not: "ARCHIVED" };

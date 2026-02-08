@@ -24,6 +24,34 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({ postId, initialCommen
   const [notice, setNotice] = useState<string | null>(null);
   const [noticeType, setNoticeType] = useState<'success' | 'warning' | 'error'>('success');
   const [submitting, setSubmitting] = useState(false);
+  const [likedComments, setLikedComments] = useState<Set<string>>(new Set());
+  const [likingCommentId, setLikingCommentId] = useState<string | null>(null);
+
+  // Load liked comments from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('likedComments');
+        if (stored) {
+          const likedArray = JSON.parse(stored) as string[];
+          setLikedComments(new Set(likedArray));
+        }
+      } catch (error) {
+        console.error('Error loading liked comments from localStorage:', error);
+      }
+    }
+  }, []);
+
+  // Save liked comments to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined' && likedComments.size > 0) {
+      try {
+        localStorage.setItem('likedComments', JSON.stringify(Array.from(likedComments)));
+      } catch (error) {
+        console.error('Error saving liked comments to localStorage:', error);
+      }
+    }
+  }, [likedComments]);
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +93,67 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({ postId, initialCommen
       setNoticeType('error');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleLike = async (commentId: string) => {
+    // Prevent duplicate likes
+    if (likedComments.has(commentId) || likingCommentId === commentId) {
+      return;
+    }
+
+    setLikingCommentId(commentId);
+
+    // Optimistic update
+    setComments((prev) =>
+      prev.map((comment) =>
+        comment.id === commentId
+          ? { ...comment, likes: comment.likes + 1 }
+          : comment
+      )
+    );
+
+    // Add to liked comments set
+    setLikedComments((prev) => new Set([...prev, commentId]));
+
+    try {
+      const response = await fetch(`/api/comments/${commentId}/like`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        // Revert optimistic update on error
+        setComments((prev) =>
+          prev.map((comment) =>
+            comment.id === commentId
+              ? { ...comment, likes: Math.max(0, comment.likes - 1) }
+              : comment
+          )
+        );
+        setLikedComments((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(commentId);
+          return newSet;
+        });
+        console.error('Failed to like comment');
+      }
+    } catch (error) {
+      // Revert optimistic update on error
+      setComments((prev) =>
+        prev.map((comment) =>
+          comment.id === commentId
+            ? { ...comment, likes: Math.max(0, comment.likes - 1) }
+            : comment
+        )
+      );
+      setLikedComments((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(commentId);
+        return newSet;
+      });
+      console.error('Error liking comment:', error);
+    } finally {
+      setLikingCommentId(null);
     }
   };
 
@@ -158,10 +247,21 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({ postId, initialCommen
                   <p className="text-gray-300 text-sm leading-relaxed">{comment.content}</p>
                 </div>
                 <div className="flex gap-4 mt-2 ml-2">
-                  <button className="text-xs text-gray-500 font-bold hover:text-white flex items-center gap-1">
-                    <ThumbsUp size={12} /> Like ({comment.likes})
+                  <button
+                    onClick={() => handleLike(comment.id)}
+                    disabled={likedComments.has(comment.id) || likingCommentId === comment.id}
+                    className={`text-xs font-bold flex items-center gap-1 transition-colors ${
+                      likedComments.has(comment.id)
+                        ? 'text-afro-primary cursor-not-allowed'
+                        : 'text-gray-500 hover:text-white cursor-pointer'
+                    } disabled:opacity-60 disabled:cursor-not-allowed`}
+                  >
+                    <ThumbsUp
+                      size={12}
+                      className={likedComments.has(comment.id) ? 'fill-current' : ''}
+                    />
+                    {likingCommentId === comment.id ? 'Liking...' : `Like (${comment.likes})`}
                   </button>
-                  <button className="text-xs text-gray-500 font-bold hover:text-white">Reply</button>
                 </div>
               </div>
             </div>
