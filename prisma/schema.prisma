@@ -328,6 +328,30 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
+model IncomingEmail {
+  id              String   @id @default(cuid())
+  messageId       String?  @unique
+  from            String
+  to              String
+  subject         String?
+  textBody        String?
+  htmlBody        String?
+  headers         Json?
+  attachments     Json?
+  receivedAt      DateTime @default(now())
+  processed       Boolean  @default(false)
+  processedAt     DateTime?
+  forwardedTo     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([to])
+  @@index([from])
+  @@index([receivedAt])
+  @@index([processed])
+  @@map("incoming_emails")
+}
+
 enum UserRole {
   USER
   AUTHOR

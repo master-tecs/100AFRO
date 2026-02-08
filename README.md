@@ -72,6 +72,8 @@ MUSICBRAINZ_USER_AGENT="100AFRO/1.0 (admin@100afro.com)"
 # Email Service (Resend) - Required for newsletter functionality
 RESEND_API_KEY="re_your-resend-api-key"
 RESEND_FROM_EMAIL="100AFRO <newsletter@100afro.com>" # Optional, defaults to newsletter@100afro.com
+RESEND_WEBHOOK_SECRET="your-webhook-secret" # Optional, for verifying incoming email webhooks
+INCOMING_EMAIL_FORWARD_TO="your-email@example.com" # Optional, forward all incoming emails to this address
 NEXT_PUBLIC_SITE_URL="http://localhost:3000" # Optional, defaults to NEXTAUTH_URL or localhost:3000
 
 # OAuth Providers (optional)
@@ -101,7 +103,34 @@ npm run db:seed
 psql $DATABASE_URL -f prisma/migrations/add_fulltext_search.sql
 ```
 
-5. **Run the development server**:
+5. **Set up incoming email receiving** (optional):
+
+   If you want to receive emails sent to your domain:
+   
+   a. **Enable receiving in Resend**: Go to your Resend dashboard → Domains → Enable Receiving
+   
+   b. **Configure MX record**: Add the MX record provided by Resend to your DNS:
+      ```
+      Type: MX
+      Name: @
+      Value: inbound-smtp.us-east-1.amazonaws.com
+      Priority: 10
+      ```
+   
+   c. **Set up webhook in Resend**:
+      - Go to Resend Dashboard → Webhooks
+      - Add webhook URL: `https://yourdomain.com/api/emails/inbound`
+      - Select event: `email.inbound` or `email.received`
+      - Copy the webhook secret and add it to `.env.local` as `RESEND_WEBHOOK_SECRET`
+   
+   d. **Optional**: Set `INCOMING_EMAIL_FORWARD_TO` in `.env.local` to forward all incoming emails to a single address
+   
+   e. **Run database migration** to create the incoming emails table:
+      ```bash
+      npx prisma migrate dev --name add_incoming_emails
+      ```
+
+6. **Run the development server**:
 
 ```bash
 npm run dev
