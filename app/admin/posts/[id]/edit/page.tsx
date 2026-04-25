@@ -270,7 +270,11 @@ export default function EditPostPage() {
             </div>
             <div className="flex items-center gap-3">
               <Link
-                href={`/blog/${post.slug || postId}`}
+                href={
+                  post?.status === 'PUBLISHED'
+                    ? `/blog/${post.slug || postId}`
+                    : `/admin/posts/${postId}/preview`
+                }
                 target="_blank"
                 className="px-4 py-2 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 font-bold text-sm transition-colors flex items-center gap-2"
               >

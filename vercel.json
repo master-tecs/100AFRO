@@ -4,6 +4,10 @@
     {
       "path": "/api/admin/daily-fact/refresh",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/admin/research/cron",
+      "schedule": "0 6 * * *"
     }
   ]
 }

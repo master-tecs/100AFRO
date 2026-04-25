@@ -32,6 +32,21 @@ export function escapeHtml(text: string): string {
     .replace(/'/g, "&#39;");
 }
 
+export async function generateUniqueSlug(base: string, excludeId?: string): Promise<string> {
+  const { prisma } = await import('./prisma');
+  if (!prisma) return base;
+  
+  let slug = base;
+  let i = 2;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const existing = await prisma.blogPost.findUnique({ where: { slug } });
+    if (!existing || (excludeId && existing.id === excludeId)) return slug;
+    slug = `${base}-${i}`;
+    i += 1;
+  }
+}
+
 // Export slugify for use in API routes
 export { slugify as default }
 

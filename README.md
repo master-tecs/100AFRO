@@ -81,6 +81,17 @@ GOOGLE_CLIENT_ID=""
 GOOGLE_CLIENT_SECRET=""
 GITHUB_ID=""
 GITHUB_SECRET=""
+
+# AI Service Configuration (for automated content generation)
+AI_PROVIDER=openai  # Default: openai (future: anthropic)
+OPENAI_API_KEY="sk-..."  # Required for article generation
+OPENAI_MODEL="gpt-4"  # Default: gpt-4 (can use gpt-3.5-turbo for cost savings)
+ANTHROPIC_API_KEY="sk-ant-..."  # Optional, for future Anthropic Claude support
+
+# Research Agent Configuration (for automated topic discovery)
+TWITTER_BEARER_TOKEN="..."  # Optional, for Twitter/X API v2 (get from developer.twitter.com)
+RESEARCH_CRON_SECRET="..."  # Secret for protecting cron endpoint (generate random string)
+AFRICAN_NEWS_RSS_FEEDS="https://www.bellanaija.com/feed/,https://www.pulse.ng/feed"  # Optional, comma-separated RSS feed URLs
 ```
 
 3. **Set up the database**:

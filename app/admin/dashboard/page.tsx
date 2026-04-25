@@ -27,6 +27,8 @@ import {
   Calendar,
   Save,
   AlertTriangle,
+  Sparkles,
+  RefreshCw,
 } from "lucide-react";
 import TruncatedTitle from "../../components/TruncatedTitle";
 import { VideoCategory } from "@prisma/client";
@@ -76,6 +78,13 @@ export default function AdminDashboard() {
   >(
     "posts"
   );
+  const [researchStats, setResearchStats] = useState<{
+    lastRun: { topicsFound: number; completedAt: string | null } | null;
+    pendingTopics: number;
+    selectedTopics: number;
+  } | null>(null);
+  const [researchStatsLoading, setResearchStatsLoading] = useState(false);
+  const [runningResearch, setRunningResearch] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
   const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
@@ -620,6 +629,85 @@ export default function AdminDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
+  // Fetch research stats when Stats tab is active
+  useEffect(() => {
+    if (activeTab === "stats" && !researchStats && !researchStatsLoading) {
+      fetchResearchStats();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  const fetchResearchStats = async () => {
+    setResearchStatsLoading(true);
+    try {
+      // Fetch last research run
+      const runsRes = await fetch("/api/admin/research/runs?limit=1");
+      let lastRun = null;
+      if (runsRes.ok) {
+        const runsData = await runsRes.json();
+        if (runsData.runs && runsData.runs.length > 0) {
+          const run = runsData.runs[0];
+          if (run.status === "COMPLETED") {
+            lastRun = {
+              topicsFound: run.topicsFound,
+              completedAt: run.completedAt,
+            };
+          }
+        }
+      }
+
+      // Fetch topic counts
+      const [pendingRes, selectedRes] = await Promise.all([
+        fetch("/api/admin/topics?status=PENDING&limit=1"),
+        fetch("/api/admin/topics?status=SELECTED&limit=1"),
+      ]);
+
+      let pendingTopics = 0;
+      let selectedTopics = 0;
+
+      if (pendingRes.ok) {
+        const pendingData = await pendingRes.json();
+        pendingTopics = pendingData.pagination?.total || 0;
+      }
+      if (selectedRes.ok) {
+        const selectedData = await selectedRes.json();
+        selectedTopics = selectedData.pagination?.total || 0;
+      }
+
+      setResearchStats({
+        lastRun,
+        pendingTopics,
+        selectedTopics,
+      });
+    } catch (error) {
+      console.error("Error fetching research stats:", error);
+    } finally {
+      setResearchStatsLoading(false);
+    }
+  };
+
+  const handleRunResearch = async () => {
+    try {
+      setRunningResearch(true);
+      const response = await fetch("/api/admin/research/run", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Failed to run research");
+      }
+
+      const data = await response.json();
+      showToast("success", `Research completed! Found ${data.topicsFound} topics`);
+      await fetchResearchStats();
+    } catch (error: any) {
+      showToast("error", error.message || "Failed to run research");
+    } finally {
+      setRunningResearch(false);
+    }
+  };
+
   const handleEdit = (post: BlogPost) => {
     router.push(`/admin/posts/${post.id}/edit`);
   };
@@ -1090,10 +1178,18 @@ export default function AdminDashboard() {
                                 <Trash2 size={18} />
                               </button>
                               <Link
-                                href={`/blog/${post.slug}`}
+                                href={
+                                  post.status === 'PUBLISHED'
+                                    ? `/blog/${post.slug}`
+                                    : `/admin/posts/${post.id}/preview`
+                                }
                                 target="_blank"
                                 className="p-2 text-gray-500 hover:text-afro-primary transition-colors"
-                                title="Preview Live"
+                                title={
+                                  post.status === 'PUBLISHED'
+                                    ? 'Preview Live'
+                                    : 'Preview Draft'
+                                }
                               >
                                 <ExternalLink size={18} />
                               </Link>
@@ -1596,6 +1692,82 @@ export default function AdminDashboard() {
                   <p>• Fetches top songs and albums from Apple Music RSS feeds</p>
                   <p>• Updates charts for Nigeria, Ghana, and South Africa</p>
                   <p>• Charts are displayed on the /charts page</p>
+                </div>
+              </div>
+
+              {/* Research Agent Management */}
+              <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 mb-6">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+                  <div>
+                    <h3 className="text-white font-bold mb-2 flex items-center gap-2">
+                      <Sparkles size={20} />
+                      Content Research Agent
+                    </h3>
+                    <p className="text-gray-400 text-sm">
+                      Automatically discover trending topics from Twitter, RSS feeds, and Google News focused on African entertainment and culture.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleRunResearch}
+                      disabled={runningResearch}
+                      className="flex items-center gap-2 bg-afro-primary hover:bg-afro-primary/90 disabled:bg-gray-700 disabled:cursor-not-allowed text-black font-semibold px-4 py-2 rounded-lg transition-colors duration-200 whitespace-nowrap"
+                    >
+                      {runningResearch ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                          Running...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw size={18} />
+                          Run Research Now
+                        </>
+                      )}
+                    </button>
+                    <Link
+                      href="/admin/topics"
+                      className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors duration-200 whitespace-nowrap"
+                    >
+                      <FileText size={18} />
+                      View Topics
+                    </Link>
+                  </div>
+                </div>
+                {researchStatsLoading ? (
+                  <div className="text-sm text-gray-400">Loading stats...</div>
+                ) : researchStats ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div className="bg-gray-900/50 rounded-lg p-3">
+                      <div className="text-xs text-gray-500 mb-1">Pending Topics</div>
+                      <div className="text-2xl font-bold text-white">{researchStats.pendingTopics}</div>
+                    </div>
+                    <div className="bg-gray-900/50 rounded-lg p-3">
+                      <div className="text-xs text-gray-500 mb-1">Selected Topics</div>
+                      <div className="text-2xl font-bold text-white">{researchStats.selectedTopics}</div>
+                    </div>
+                    <div className="bg-gray-900/50 rounded-lg p-3">
+                      <div className="text-xs text-gray-500 mb-1">Last Run</div>
+                      {researchStats.lastRun ? (
+                        <>
+                          <div className="text-lg font-bold text-white">{researchStats.lastRun.topicsFound} topics</div>
+                          <div className="text-xs text-gray-400 mt-1">
+                            {researchStats.lastRun.completedAt
+                              ? new Date(researchStats.lastRun.completedAt).toLocaleString()
+                              : "N/A"}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-sm text-gray-400">No runs yet</div>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+                <div className="text-xs text-gray-500 space-y-1">
+                  <p>• Searches Twitter, RSS feeds, and Google News for African/Afro-centric topics</p>
+                  <p>• Filters content for relevance to African entertainment, music, culture, and lifestyle</p>
+                  <p>• Automatic daily research via Vercel Cron (6:00 AM UTC)</p>
+                  <p>• Review and select topics, then generate articles using AI</p>
                 </div>
               </div>
 
