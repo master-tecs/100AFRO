@@ -29,9 +29,10 @@ export async function GET(request: NextRequest) {
     const [videos, total] = await Promise.all([
       prisma.video.findMany({
         where,
-        orderBy: {
-          createdAt: 'desc',
-        },
+        orderBy: [
+          { publishedAt: 'desc' },
+          { createdAt: 'asc' },
+        ],
         skip,
         take: limit,
       }),

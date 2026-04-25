@@ -62,7 +62,7 @@ async function VideosPageContent({ searchParams }: VideosPageProps) {
           where,
           orderBy: [
             { publishedAt: 'desc' },
-            { createdAt: 'desc' },
+            { createdAt: 'asc' },
           ],
           skip,
           take: videosPerPage,
@@ -71,7 +71,7 @@ async function VideosPageContent({ searchParams }: VideosPageProps) {
         // Fallback if publishedAt field doesn't exist yet
         videos = await prisma.video.findMany({
           where,
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: 'asc' },
           skip,
           take: videosPerPage,
         });

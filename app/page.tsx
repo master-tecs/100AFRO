@@ -13,6 +13,13 @@ import { unstable_noStore } from 'next/cache';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+function parseViews(views: string): number {
+  if (!views) return 0;
+  if (views.endsWith('M')) return parseFloat(views) * 1_000_000;
+  if (views.endsWith('K')) return parseFloat(views) * 1_000;
+  return parseInt(views, 10) || 0;
+}
+
 async function getHomeData() {
   // Disable caching for this function to ensure fresh data, especially for daily fact
   unstable_noStore();
@@ -59,8 +66,11 @@ async function getHomeData() {
           orderBy: { publishedAt: 'desc' },
         }),
         prismaClient.video.findMany({
-          take: 4,
-          orderBy: { createdAt: 'desc' },
+          take: 20,
+          orderBy: [
+            { publishedAt: 'desc' },
+            { createdAt: 'asc' },
+          ],
         }),
         prismaClient.blogPost.findMany({
           where: publishedWhere,
@@ -87,7 +97,9 @@ async function getHomeData() {
       featuredPost = fetchedFeaturedPost;
       subFeaturedPosts = fetchedSubFeaturedPosts;
       industryPosts = fetchedIndustryPosts;
-      latestVideos = fetchedLatestVideos;
+      latestVideos = [...fetchedLatestVideos]
+        .sort((a, b) => parseViews(b.views) - parseViews(a.views))
+        .slice(0, 4);
       trendingPosts = fetchedTrendingPosts;
       featuredArtists = fetchedFeaturedArtists;
       trendingTopics = fetchedTrendingTopics;
@@ -99,21 +111,28 @@ async function getHomeData() {
     // Continue with empty data
   }
 
-  // Get featured video
+  // Get featured video — most viewed from the 10 most recent uploads
   let featuredVideo = null;
-  if (latestVideos.length > 0) {
-    if (prisma !== null) {
-      try {
-        featuredVideo = await prisma.video.findFirst({
-          where: { featured: true },
-        }) || latestVideos[0];
-      } catch (error) {
-        console.error('Error fetching featured video:', error);
-        featuredVideo = latestVideos[0];
+  if (prisma !== null) {
+    try {
+      const recentTen = await prisma.video.findMany({
+        take: 10,
+        orderBy: [
+          { publishedAt: 'desc' },
+          { createdAt: 'asc' },
+        ],
+      });
+      if (recentTen.length > 0) {
+        featuredVideo = [...recentTen].sort(
+          (a, b) => parseViews(b.views) - parseViews(a.views)
+        )[0];
       }
-    } else {
-      featuredVideo = latestVideos[0];
+    } catch (error) {
+      console.error('Error fetching featured video:', error);
+      featuredVideo = latestVideos[0] ?? null;
     }
+  } else if (latestVideos.length > 0) {
+    featuredVideo = latestVideos[0];
   }
 
   return {
