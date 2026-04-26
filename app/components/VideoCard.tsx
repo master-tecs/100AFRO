@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import { VideoCategory } from '@prisma/client';
 import { Play, Volume2, VolumeX, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
+import { track } from '@/lib/mixpanel';
 
 interface Video {
   id: string;
@@ -80,6 +81,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
                 e.preventDefault();
                 e.stopPropagation();
                 setIsPlaying(true);
+                track('Video Played', { youtubeId: video.youtubeId, title: video.title });
               }}
               className="absolute inset-0 flex items-center justify-center z-10"
               aria-label={`Play video: ${video.title}`}
@@ -157,6 +159,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
           href={youtubeUrl}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => track('Video Opened on YouTube', { youtubeId: video.youtubeId, title: video.title })}
           className="mt-3 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors duration-200"
         >
           <ExternalLink size={16} />

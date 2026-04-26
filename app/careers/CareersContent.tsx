@@ -17,6 +17,7 @@ import {
   Mail,
 } from 'lucide-react';
 import { z } from 'zod';
+import { track } from '@/lib/mixpanel';
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -587,12 +588,13 @@ function ApplyModal({ job, onClose }: { job: Job; onClose: () => void }) {
         const data = await res.json().catch(() => ({}));
         throw new Error((data as { error?: string }).error || 'Something went wrong');
       }
+      track('Careers Application Submitted', { jobId: job.id, jobTitle: job.title });
       setStatus('success');
     } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+      track('Careers Application Failed', { jobId: job.id, error: errMsg });
       setStatus('error');
-      setErrorMessage(
-        err instanceof Error ? err.message : 'Something went wrong. Please try again.'
-      );
+      setErrorMessage(errMsg);
     }
   };
 
@@ -795,7 +797,11 @@ function JobCard({ job, onApply }: { job: Job; onApply: (job: Job) => void }) {
       {/* Row trigger */}
       <button
         className="w-full text-left py-6 flex flex-col sm:flex-row sm:items-center gap-4 group"
-        onClick={() => setExpanded(!expanded)}
+        onClick={() => {
+          const next = !expanded;
+          setExpanded(next);
+          if (next) track('Careers Job Expanded', { jobId: job.id, jobTitle: job.title });
+        }}
         aria-expanded={expanded}
       >
         {/* Left */}
@@ -923,7 +929,10 @@ function JobCard({ job, onApply }: { job: Job; onApply: (job: Job) => void }) {
 
               {/* CTA */}
               <button
-                onClick={() => onApply(job)}
+                onClick={() => {
+                  track('Careers Apply Modal Opened', { jobId: job.id, jobTitle: job.title });
+                  onApply(job);
+                }}
                 className="w-full py-4 bg-afro-primary text-black font-bold rounded-xl hover:bg-yellow-400 transition-colors text-sm tracking-wide"
               >
                 Apply for this role →
@@ -1021,7 +1030,7 @@ export default function CareersContent() {
               {DEPARTMENTS.map((dept) => (
                 <button
                   key={dept}
-                  onClick={() => setActiveFilter(dept)}
+                  onClick={() => { setActiveFilter(dept); track('Careers Filter Changed', { department: dept }); }}
                   className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
                     activeFilter === dept
                       ? 'bg-afro-primary text-black shadow-sm'

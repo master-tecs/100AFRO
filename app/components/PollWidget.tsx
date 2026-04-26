@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { BarChart3, CheckCircle, AlertCircle } from 'lucide-react';
+import { track } from '@/lib/mixpanel';
 
 type PollOption = { id: string; text: string; votes: number; percent: number };
 type ActivePoll = {
@@ -61,6 +62,7 @@ export default function PollWidget({ initialPoll }: { initialPoll?: ActivePoll |
         setError(data.error || 'Failed to vote');
         return;
       }
+      track('Poll Voted', { pollId: poll.id, optionId: selected });
       setPoll(data.poll);
       setSuccess('Vote submitted!');
     } catch {

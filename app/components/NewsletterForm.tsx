@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { CheckCircle, X, Mail } from 'lucide-react';
+import { track } from '@/lib/mixpanel';
 
 const emailSchema = z.string().email('Invalid email address');
 
@@ -58,12 +59,15 @@ const NewsletterForm: React.FC<NewsletterFormProps> = ({
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Something went wrong. Please try again.');
+        const errMsg = data.error || 'Something went wrong. Please try again.';
+        setError(errMsg);
+        track('Newsletter Signup Error', { variant, error: errMsg });
         setIsLoading(false);
         return;
       }
 
       // Success
+      track('Newsletter Signup Success', { variant });
       setSuccess(true);
       setIsPending(data.pending || false);
       if (data.pending) {
@@ -85,6 +89,7 @@ const NewsletterForm: React.FC<NewsletterFormProps> = ({
       }, 8000);
     } catch (err) {
       setError('Network error. Please try again.');
+      track('Newsletter Signup Error', { variant, error: 'network_error' });
       setIsLoading(false);
     }
   };

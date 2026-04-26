@@ -6,6 +6,7 @@ import ConditionalLayout from './components/ConditionalLayout'
 import { Providers } from './providers'
 import GoogleAnalytics from './components/GoogleAnalytics'
 import CookieConsentBanner from './components/CookieConsentBanner'
+import MixpanelProvider from './components/MixpanelProvider'
 
 export const metadata: Metadata = {
   title: '100AFRO | African Entertainment Hub',
@@ -55,6 +56,9 @@ export default function RootLayout({
           </>
         )}
         <Providers>
+          <Suspense fallback={null}>
+            <MixpanelProvider />
+          </Suspense>
           <ConditionalLayout>
             {children}
           </ConditionalLayout>

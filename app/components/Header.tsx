@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/use-auth';
 import { Menu, X, Youtube, Search } from 'lucide-react';
 import UserAvatar from './UserAvatar';
+import { track } from '@/lib/mixpanel';
 
 const Header: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -63,6 +64,7 @@ const Header: React.FC = () => {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
+      track('Search Submitted', { query: searchQuery.trim() });
       router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
       toggleSearch();
     }
@@ -114,6 +116,7 @@ const Header: React.FC = () => {
                 <Link
                   key={link.name}
                   href={link.path}
+                  onClick={() => track('Nav Clicked', { destination: link.name })}
                   className={`text-sm font-bold uppercase tracking-wider transition-colors duration-200 ${
                     isActive(link.path)
                       ? 'text-afro-primary'
@@ -219,6 +222,7 @@ const Header: React.FC = () => {
                   href="https://youtube.com/@100AFRO"
                   target="_blank"
                   rel="noreferrer"
+                  onClick={() => track('YouTube Subscribe Clicked', { location: 'header_desktop' })}
                   className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full font-bold flex items-center gap-2 transition-transform hover:scale-105 text-sm uppercase tracking-wide"
                 >
                   <Youtube size={18} />
@@ -324,6 +328,7 @@ const Header: React.FC = () => {
                   href="https://youtube.com/@100AFRO"
                   target="_blank"
                   rel="noreferrer"
+                  onClick={() => track('YouTube Subscribe Clicked', { location: 'header_tablet' })}
                   className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-full font-bold flex items-center gap-1 text-xs uppercase"
                 >
                   <Youtube size={16} />
@@ -350,7 +355,7 @@ const Header: React.FC = () => {
                 <Link
                   key={link.name}
                   href={link.path}
-                  onClick={() => setIsOpen(false)}
+                  onClick={() => { setIsOpen(false); track('Nav Clicked', { destination: link.name }); }}
                   className={`block px-4 py-4 rounded-xl text-lg font-bold border-b border-gray-800 ${
                     isActive(link.path)
                       ? 'text-afro-primary'
@@ -377,6 +382,7 @@ const Header: React.FC = () => {
                   href="https://youtube.com/@100AFRO"
                   target="_blank"
                   rel="noreferrer"
+                  onClick={() => track('YouTube Subscribe Clicked', { location: 'header_mobile' })}
                   className="block w-full text-center mt-8 bg-red-600 hover:bg-red-700 text-white px-4 py-4 rounded-xl font-bold uppercase tracking-widest"
                 >
                   <Youtube size={18} className="inline mr-2" />
