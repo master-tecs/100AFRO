@@ -102,8 +102,8 @@ const Header: React.FC = () => {
                   priority
                 />
               </div>
-              <div className="relative hidden sm:block">
-                <span className="font-display font-bold text-3xl text-white tracking-tighter">
+              <div className="relative">
+                <span className="font-display font-bold text-xl sm:text-3xl text-white tracking-tighter">
                   100<span className="text-afro-primary">AFRO</span>
                 </span>
                 <div className="absolute -bottom-1 left-0 w-0 h-1 bg-afro-primary transition-all duration-300 group-hover:w-full"></div>
