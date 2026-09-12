@@ -3,6 +3,10 @@ import { z } from 'zod';
 import { resend, FROM_EMAIL } from '@/lib/resend';
 import { rateLimit } from '@/lib/rate-limit';
 
+// Set to false to close all roles and stop accepting applications.
+// Flip back to true (and in app/careers/CareersContent.tsx) to reopen.
+const ACCEPTING_APPLICATIONS = false;
+
 const applySchema = z.object({
   name: z.string().min(2).max(120),
   email: z.string().email(),
@@ -102,6 +106,16 @@ function buildConfirmationHtml(name: string, role: string): string {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!ACCEPTING_APPLICATIONS) {
+      return NextResponse.json(
+        {
+          error:
+            'Applications are currently closed. All of our roles have been filled — thank you for your interest in 100AFRO.',
+        },
+        { status: 403 }
+      );
+    }
+
     const rl = rateLimit(request, {
       windowMs: 60_000,
       max: 3,

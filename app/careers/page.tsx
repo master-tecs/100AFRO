@@ -4,7 +4,7 @@ import CareersContent from './CareersContent';
 export const metadata: Metadata = {
   title: 'Careers | 100AFRO',
   description:
-    'Join the team building the voice of African culture online. Browse open roles in editorial, creative, growth, and leadership at 100AFRO.',
+    'Applications for 100AFRO are currently closed. All of our current roles have been filled. Check back later, as we expect to open new positions as we grow.',
 };
 
 export default function CareersPage() {

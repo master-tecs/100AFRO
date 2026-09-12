@@ -477,6 +477,11 @@ const JOBS: Job[] = [
 
 const DEPARTMENTS = ['All', 'Editorial', 'Growth', 'Creative', 'Leadership', 'Internship'];
 
+// ─── HIRING STATUS ────────────────────────────────────────────────────────────
+// Set to false to close all roles and stop accepting applications.
+// Flip back to true to reopen the listings — job data below is preserved.
+const ACCEPTING_APPLICATIONS = false;
+
 const VALUES = [
   {
     icon: Globe,
@@ -958,8 +963,11 @@ export default function CareersContent() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [applyJob, setApplyJob] = useState<Job | null>(null);
 
-  const filteredJobs =
-    activeFilter === 'All' ? JOBS : JOBS.filter((j) => j.dept === activeFilter);
+  const filteredJobs = !ACCEPTING_APPLICATIONS
+    ? []
+    : activeFilter === 'All'
+      ? JOBS
+      : JOBS.filter((j) => j.dept === activeFilter);
 
   return (
     <>
@@ -981,7 +989,7 @@ export default function CareersContent() {
             <div className="flex items-center gap-3 mb-6">
               <div className="w-8 h-px bg-afro-primary" />
               <p className="text-xs tracking-widest text-afro-primary uppercase font-bold">
-                Open positions · 2026
+                {ACCEPTING_APPLICATIONS ? 'Open positions · 2026' : 'Applications closed · 2026'}
               </p>
             </div>
 
@@ -1002,10 +1010,10 @@ export default function CareersContent() {
             {/* Stats row */}
             <div className="flex flex-wrap gap-8 sm:gap-14">
               {[
-                { value: String(JOBS.length), label: 'Open roles' },
+                { value: ACCEPTING_APPLICATIONS ? String(JOBS.length) : '0', label: 'Open roles' },
                 { value: '100%', label: 'Remote' },
                 { value: '5', label: 'Cities covered' },
-                { value: 'Now', label: 'Start date' },
+                { value: ACCEPTING_APPLICATIONS ? 'Now' : 'Closed', label: 'Start date' },
               ].map((s) => (
                 <div key={s.label} className="flex flex-col gap-1">
                   <span className="text-3xl sm:text-4xl font-display font-bold text-white">
@@ -1021,6 +1029,7 @@ export default function CareersContent() {
         </section>
 
         {/* ── FILTER BAR ───────────────────────────────────────────────────── */}
+        {ACCEPTING_APPLICATIONS && (
         <div className="sticky top-0 z-30 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-2 overflow-x-auto py-3.5 scrollbar-hide">
@@ -1043,33 +1052,60 @@ export default function CareersContent() {
             </div>
           </div>
         </div>
+        )}
 
         {/* ── JOB LISTINGS ─────────────────────────────────────────────────── */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-5 border-b border-gray-800/50">
-            <span className="text-xs text-gray-600 uppercase tracking-widest">
-              {filteredJobs.length} open position
-              {filteredJobs.length !== 1 ? 's' : ''}
-            </span>
-          </div>
+          {ACCEPTING_APPLICATIONS ? (
+            <>
+              <div className="flex items-center justify-between py-5 border-b border-gray-800/50">
+                <span className="text-xs text-gray-600 uppercase tracking-widest">
+                  {filteredJobs.length} open position
+                  {filteredJobs.length !== 1 ? 's' : ''}
+                </span>
+              </div>
 
-          <div>
-            {filteredJobs.map((job) => (
-              <JobCard key={job.id} job={job} onApply={setApplyJob} />
-            ))}
-          </div>
+              <div>
+                {filteredJobs.map((job) => (
+                  <JobCard key={job.id} job={job} onApply={setApplyJob} />
+                ))}
+              </div>
 
-          {filteredJobs.length === 0 && (
-            <div className="py-20 text-center">
-              <p className="text-gray-500 text-sm mb-3">
-                No open positions in this department right now.
+              {filteredJobs.length === 0 && (
+                <div className="py-20 text-center">
+                  <p className="text-gray-500 text-sm mb-3">
+                    No open positions in this department right now.
+                  </p>
+                  <button
+                    onClick={() => setActiveFilter('All')}
+                    className="text-afro-primary text-sm hover:underline"
+                  >
+                    View all roles →
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="py-20 sm:py-28 text-center max-w-2xl mx-auto">
+              <div className="w-14 h-14 rounded-full bg-afro-primary/10 flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 className="text-afro-primary" size={28} />
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-display font-bold text-white mb-4">
+                We&apos;re not accepting applications right now
+              </h2>
+              <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8">
+                All of our current roles are now closed — we&apos;ve found the people we
+                were looking for. Thank you to everyone who applied. We&apos;re not
+                reviewing new applications at this time, but we&apos;re growing fast and
+                expect to open new positions in the future.
               </p>
-              <button
-                onClick={() => setActiveFilter('All')}
-                className="text-afro-primary text-sm hover:underline"
+              <Link
+                href="/contact"
+                className="inline-flex items-center gap-2 px-6 py-3 border border-gray-700 text-gray-300 font-bold rounded-lg hover:border-afro-primary/40 hover:text-afro-primary transition-colors text-sm"
               >
-                View all roles →
-              </button>
+                Stay in touch
+                <ArrowRight size={16} />
+              </Link>
             </div>
           )}
         </section>
@@ -1118,6 +1154,7 @@ export default function CareersContent() {
         </section>
 
         {/* ── APPLICATION PROCESS ──────────────────────────────────────────── */}
+        {ACCEPTING_APPLICATIONS && (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
           <div className="mb-12">
             <div className="flex items-center gap-3 mb-4">
@@ -1169,27 +1206,40 @@ export default function CareersContent() {
             ))}
           </div>
         </section>
+        )}
 
         {/* ── FOOTER CTA ───────────────────────────────────────────────────── */}
         <section className="border-t border-gray-800 bg-gray-950">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
             <div className="max-w-2xl">
               <h2 className="text-3xl sm:text-4xl font-display font-bold text-white mb-4">
-                Don&apos;t see your role?
+                {ACCEPTING_APPLICATIONS ? "Don't see your role?" : 'Applications are closed'}
               </h2>
               <p className="text-gray-400 leading-relaxed mb-8 text-sm sm:text-base">
-                We&apos;re always looking for talented people who believe in what we&apos;re
-                building. If you think you belong at 100AFRO but don&apos;t see your
-                role listed, tell us who you are and what you&apos;d do here.
+                {ACCEPTING_APPLICATIONS ? (
+                  <>
+                    We&apos;re always looking for talented people who believe in what we&apos;re
+                    building. If you think you belong at 100AFRO but don&apos;t see your
+                    role listed, tell us who you are and what you&apos;d do here.
+                  </>
+                ) : (
+                  <>
+                    All of our roles are currently filled and we&apos;re no longer accepting
+                    applications. Thank you for your interest in 100AFRO — follow along and
+                    check back later, as we expect to open new positions as we grow.
+                  </>
+                )}
               </p>
               <div className="flex flex-wrap gap-4">
-                <a
-                  href="mailto:careers@100afro.com?subject=General Application"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-afro-primary text-black font-bold rounded-lg hover:bg-yellow-400 transition-colors text-sm"
-                >
-                  Send general application
-                  <Mail size={16} />
-                </a>
+                {ACCEPTING_APPLICATIONS && (
+                  <a
+                    href="mailto:careers@100afro.com?subject=General Application"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-afro-primary text-black font-bold rounded-lg hover:bg-yellow-400 transition-colors text-sm"
+                  >
+                    Send general application
+                    <Mail size={16} />
+                  </a>
+                )}
                 <Link
                   href="/contact"
                   className="inline-flex items-center gap-2 px-6 py-3 border border-gray-700 text-gray-300 font-bold rounded-lg hover:border-afro-primary/40 hover:text-afro-primary transition-colors text-sm"
